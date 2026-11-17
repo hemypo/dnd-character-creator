@@ -169,6 +169,19 @@ async function callGeminiBackstory(
 
 Параметры персонажа:
 - Имя: ${character.name || 'Безымянный герой'}
+- Пол: ${character.gender || 'Не указан'}
+- Внешность и приметы: ${
+    character.appearance
+      ? [
+          character.appearance.age,
+          character.appearance.build,
+          character.appearance.hairAndEyes,
+          character.appearance.distinguishingFeatures,
+        ]
+          .filter(Boolean)
+          .join(', ')
+      : 'Не указаны'
+  }
 - Наследие (Species): ${character.species || 'Человек'}
 - Класс: ${character.characterClass || 'Воин'}
 - Предыстория: ${character.background || 'Солдат'}

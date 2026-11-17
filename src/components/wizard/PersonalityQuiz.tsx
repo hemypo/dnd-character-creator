@@ -64,6 +64,13 @@ export const PersonalityQuiz: React.FC<PersonalityQuizProps> = ({
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [quizResult, setQuizResult] = useState<QuizResult | null>(null);
   const [customName, setCustomName] = useState(initialSelection?.characterName || '');
+  const [gender, setGender] = useState<string>(initialSelection?.gender || 'Мужской');
+  const [age, setAge] = useState<string>(initialSelection?.appearance?.age || '25 лет');
+  const [build, setBuild] = useState<string>(initialSelection?.appearance?.build || 'Атлетичное');
+  const [hairAndEyes, setHairAndEyes] = useState<string>(initialSelection?.appearance?.hairAndEyes || '');
+  const [distinguishingFeatures, setDistinguishingFeatures] = useState<string>(
+    initialSelection?.appearance?.distinguishingFeatures || ''
+  );
 
   const currentQuestion = QUIZ_QUESTIONS[currentQuestionIndex];
   const isFinished = quizResult !== null;
@@ -105,6 +112,14 @@ export const PersonalityQuiz: React.FC<PersonalityQuizProps> = ({
       speciesId: quizResult.speciesId,
       characterName: customName || quizResult.characterName,
       alignment: quizResult.alignment,
+      gender,
+      appearance: {
+        gender,
+        age,
+        build,
+        hairAndEyes,
+        distinguishingFeatures,
+      },
       backgroundId: quizResult.backgroundId,
     });
   };
@@ -304,6 +319,143 @@ export const PersonalityQuiz: React.FC<PersonalityQuizProps> = ({
               >
                 <Dice5 className="w-4 h-4" />
               </button>
+            </div>
+          </div>
+
+          {/* Gender Selection */}
+          <div className="p-4 rounded-xl border border-slate-800 bg-slate-950/50 space-y-2.5">
+            <label className="text-xs font-semibold uppercase tracking-wider text-slate-300 block">
+              Пол персонажа:
+            </label>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { id: 'Мужской', label: '👨 Мужской' },
+                { id: 'Женский', label: '👩 Женский' },
+                { id: 'Небинарный', label: '✨ Небинарный' },
+              ].map((g) => (
+                <button
+                  key={g.id}
+                  type="button"
+                  data-testid={`gender-btn-${g.id}`}
+                  onClick={() => setGender(g.id)}
+                  className={`py-2 px-3 rounded-lg border text-xs sm:text-sm font-medium transition-all cursor-pointer ${
+                    gender === g.id
+                      ? 'border-amber-400 bg-amber-500/15 text-amber-300 shadow-sm'
+                      : 'border-slate-800 bg-slate-900/60 text-slate-400 hover:text-slate-200 hover:border-slate-700'
+                  }`}
+                >
+                  {g.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Appearance Customization */}
+          <div className="p-4 rounded-xl border border-slate-800 bg-slate-950/50 space-y-3.5">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5" /> Кастомизация внешности
+              </label>
+              <span className="text-[11px] text-slate-500">Для портрета и предыстории</span>
+            </div>
+
+            {/* Age & Build */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <span className="text-[11px] font-medium text-slate-400">Возраст:</span>
+                <input
+                  type="text"
+                  value={age}
+                  onChange={(e) => setAge(e.target.value)}
+                  placeholder="25 лет"
+                  data-testid="appearance-age-input"
+                  className="w-full px-3 py-1.5 text-xs text-slate-200 bg-slate-900 border border-slate-700 rounded-lg focus:outline-none focus:border-amber-400"
+                />
+                <div className="flex flex-wrap gap-1 pt-1">
+                  {['20 лет', '32 года', '55 лет (Ветеран)'].map((chip) => (
+                    <button
+                      key={chip}
+                      type="button"
+                      onClick={() => setAge(chip)}
+                      className="text-[10px] px-2 py-0.5 rounded bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-amber-300 transition-colors cursor-pointer"
+                    >
+                      {chip}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <span className="text-[11px] font-medium text-slate-400">Телосложение:</span>
+                <input
+                  type="text"
+                  value={build}
+                  onChange={(e) => setBuild(e.target.value)}
+                  placeholder="Атлетичное, жилистое"
+                  data-testid="appearance-build-input"
+                  className="w-full px-3 py-1.5 text-xs text-slate-200 bg-slate-900 border border-slate-700 rounded-lg focus:outline-none focus:border-amber-400"
+                />
+                <div className="flex flex-wrap gap-1 pt-1">
+                  {['Атлетичное', 'Жилистое', 'Массивное', 'Гибкое'].map((chip) => (
+                    <button
+                      key={chip}
+                      type="button"
+                      onClick={() => setBuild(chip)}
+                      className="text-[10px] px-2 py-0.5 rounded bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-amber-300 transition-colors cursor-pointer"
+                    >
+                      {chip}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Hair and Eyes */}
+            <div className="space-y-1.5">
+              <span className="text-[11px] font-medium text-slate-400">Волосы и глаза:</span>
+              <input
+                type="text"
+                value={hairAndEyes}
+                onChange={(e) => setHairAndEyes(e.target.value)}
+                placeholder="Смоляные черные волосы, серые глаза"
+                data-testid="appearance-hair-eyes-input"
+                className="w-full px-3 py-1.5 text-xs text-slate-200 bg-slate-900 border border-slate-700 rounded-lg focus:outline-none focus:border-amber-400"
+              />
+            </div>
+
+            {/* Distinguishing Features */}
+            <div className="space-y-1.5">
+              <span className="text-[11px] font-medium text-slate-400">Особые приметы и шрамы:</span>
+              <input
+                type="text"
+                value={distinguishingFeatures}
+                onChange={(e) => setDistinguishingFeatures(e.target.value)}
+                placeholder="Боевой шрам через бровь, рунические татуировки"
+                data-testid="appearance-features-input"
+                className="w-full px-3 py-1.5 text-xs text-slate-200 bg-slate-900 border border-slate-700 rounded-lg focus:outline-none focus:border-amber-400"
+              />
+              <div className="flex flex-wrap gap-1 pt-1">
+                {[
+                  'Боевой шрам через бровь',
+                  'Рунические татуировки',
+                  'Ожог пламени',
+                  'Магическое свечение глаз',
+                  'Проницательный прищур',
+                ].map((chip) => (
+                  <button
+                    key={chip}
+                    type="button"
+                    onClick={() =>
+                      setDistinguishingFeatures((prev) =>
+                        prev ? `${prev}, ${chip}` : chip
+                      )
+                    }
+                    className="text-[10px] px-2 py-0.5 rounded bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-amber-300 transition-colors cursor-pointer"
+                  >
+                    + {chip}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 

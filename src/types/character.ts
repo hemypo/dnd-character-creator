@@ -66,6 +66,14 @@ export interface CharacterSpellSlots {
   level1Used: number;
 }
 
+export interface CharacterAppearance {
+  gender?: string;
+  age?: string;
+  build?: string;
+  hairAndEyes?: string;
+  distinguishingFeatures?: string;
+}
+
 export interface Character {
   id: string;
   key: string;
@@ -81,6 +89,8 @@ export interface Character {
   speed: number;
   originFeat: string;
   alignment?: string;
+  gender?: string;
+  appearance?: CharacterAppearance;
   customMechanic?: BalanceCard;
   backstory?: string;
   portraitUrl?: string;
@@ -106,6 +116,8 @@ export interface CreateCharacterInput {
   speed?: number;
   originFeat?: string;
   alignment?: string;
+  gender?: string;
+  appearance?: CharacterAppearance;
   customMechanic?: BalanceCard;
   backstory?: string;
   portraitUrl?: string;
@@ -152,6 +164,12 @@ export function createInitialCharacter(input: CreateCharacterInput = {}): Charac
 
   if (input.alignment !== undefined) {
     character.alignment = input.alignment;
+  }
+  if (input.gender !== undefined) {
+    character.gender = input.gender;
+  }
+  if (input.appearance !== undefined) {
+    character.appearance = input.appearance;
   }
   if (input.customMechanic !== undefined) {
     character.customMechanic = input.customMechanic;
@@ -218,10 +236,12 @@ export function validateCharacter(char: unknown): char is Character {
     }
   }
 
-  // Optional backstory & portraitUrl & alignment
+  // Optional backstory & portraitUrl & alignment & gender & appearance
   if (c.backstory !== undefined && typeof c.backstory !== 'string') return false;
   if (c.portraitUrl !== undefined && typeof c.portraitUrl !== 'string') return false;
   if (c.alignment !== undefined && typeof c.alignment !== 'string') return false;
+  if (c.gender !== undefined && typeof c.gender !== 'string') return false;
+  if (c.appearance !== undefined && c.appearance !== null && typeof c.appearance !== 'object') return false;
 
   // Optional in-game live fields
   if (c.tempHp !== undefined && (typeof c.tempHp !== 'number' || !Number.isFinite(c.tempHp) || c.tempHp < 0)) {

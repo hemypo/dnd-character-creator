@@ -212,6 +212,8 @@ export function buildBaseChassis(selection: ArchetypeSelection): CharacterChassi
     speed,
     originFeat: profile.originFeat,
     alignment: selection.alignment,
+    gender: selection.gender,
+    appearance: selection.appearance,
     createdAt: new Date().toISOString(),
   });
 

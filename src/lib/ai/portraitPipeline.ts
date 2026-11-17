@@ -171,10 +171,34 @@ export function buildPortraitPrompt(character?: Partial<Character>, hasPhoto: bo
 
   const parts: string[] = [];
 
+  const gender = character?.gender || character?.appearance?.gender;
+  const genderStr = gender
+    ? gender.toLowerCase().includes('жен') || gender.toLowerCase() === 'female'
+      ? 'female'
+      : gender.toLowerCase().includes('муж') || gender.toLowerCase() === 'male'
+      ? 'male'
+      : 'androgynous'
+    : '';
+
+  const heroDescriptor = genderStr ? `${genderStr} ${speciesKey} ${classKey}` : `${speciesKey} ${classKey}`;
+
   parts.push(
-    `Masterpiece fantasy digital painting of ${name}, a ${speciesKey} ${classKey} in D&D 2024 high fantasy art style.`
+    `Masterpiece fantasy digital painting of ${name}, a ${heroDescriptor} in D&D 2024 high fantasy art style.`
   );
   parts.push(`Species Anatomy: ${speciesInfo.traits}. ${speciesInfo.features}.`);
+
+  // Physical appearance details
+  const appearanceTraits: string[] = [];
+  if (character?.appearance?.age) appearanceTraits.push(`age: ${character.appearance.age}`);
+  if (character?.appearance?.build) appearanceTraits.push(`build: ${character.appearance.build}`);
+  if (character?.appearance?.hairAndEyes) appearanceTraits.push(`hair & eyes: ${character.appearance.hairAndEyes}`);
+  if (character?.appearance?.distinguishingFeatures) {
+    appearanceTraits.push(`distinctive features: ${character.appearance.distinguishingFeatures}`);
+  }
+  if (appearanceTraits.length > 0) {
+    parts.push(`Appearance Details: ${appearanceTraits.join(', ')}.`);
+  }
+
   parts.push(`Attire & Armor: ${classInfo.armor}.`);
   parts.push(`Armament: ${classInfo.weapons}.`);
   parts.push(`Atmosphere: ${classInfo.aesthetic}, dramatic volumetric lighting, cinematic portrait framing, sharp focus.`);

@@ -8,7 +8,7 @@ import {
   getCharacterRecord,
   resetCharacterStore,
 } from '@/lib/storage/characterStore';
-import { generateCharacterPdf } from '@/lib/pdf/pdfExporter';
+import { exportToLongStoryShort } from '@/lib/lss/lssExporter';
 import { Character } from '@/types/character';
 
 describe('End-to-End Hero Lifecycle & Smoke Test', () => {
@@ -96,14 +96,17 @@ describe('End-to-End Hero Lifecycle & Smoke Test', () => {
     expect(loadedChar!.backstory).toBe(backstory);
     expect(loadedChar!.portraitUrl).toBe(portraitResult.portraitUrl);
 
-    // 7. PDF Export: Export character to official D&D 2024 PDF
-    const pdfBytes = await generateCharacterPdf(loadedChar!);
+    // 7. Long Story Short Export: Export character to JSON document
+    const lssDoc = exportToLongStoryShort(loadedChar!);
 
-    expect(pdfBytes).toBeInstanceOf(Uint8Array);
-    expect(pdfBytes.length).toBeGreaterThan(1000);
+    expect(lssDoc.jsonType).toBe('character');
+    expect(lssDoc.edition).toBe('2024');
+    expect(lssDoc.version).toBe('2');
 
-    // Verify binary signature (%PDF-)
-    const pdfHeader = Buffer.from(pdfBytes.slice(0, 5)).toString('utf-8');
-    expect(pdfHeader).toBe('%PDF-');
+    const parsedData = JSON.parse(lssDoc.data);
+    expect(parsedData.name.value).toBe('Брунгор');
+    expect(parsedData.race.value).toBe('Дварф');
+    expect(parsedData.class.value).toBe('Воин');
+    expect(parsedData.vitality.hp.max).toBe(fullCharacter.maxHp);
   });
 });

@@ -27,6 +27,13 @@ const mockCharacter: Character = {
   speed: 30,
   originFeat: 'Savage Attacker',
   alignment: 'Законно-добрый',
+  gender: 'Мужской',
+  appearance: {
+    age: '45 лет',
+    build: 'Массивное',
+    hairAndEyes: 'Рыжая борода, карие глаза',
+    distinguishingFeatures: 'Шрам от секиры',
+  },
   customMechanic: {
     id: 'mech-1',
     title: 'Дыхание кузни',
@@ -126,35 +133,63 @@ describe('InteractiveSheet Component', () => {
     expect(screen.getByText(/Рождённый в глубинах клановых чертогов/i)).toBeDefined();
   });
 
-  it('triggers PDF export download when clicking the PDF download button', async () => {
-    const mockBlob = new Blob(['%PDF-1.4 mock content'], { type: 'application/pdf' });
-    const fetchSpy = vi.spyOn(global, 'fetch').mockResolvedValueOnce({
-      ok: true,
-      blob: async () => mockBlob,
-    } as unknown as Response);
-
+  it('triggers Long Story Short JSON download when clicking the LSS download button', async () => {
     // Mock window.URL.createObjectURL and revokeObjectURL
-    const createObjectURLSpy = vi.fn().mockReturnValue('blob:http://localhost/mock-pdf');
+    const createObjectURLSpy = vi.fn().mockReturnValue('blob:http://localhost/mock-lss');
     const revokeObjectURLSpy = vi.fn();
     window.URL.createObjectURL = createObjectURLSpy;
     window.URL.revokeObjectURL = revokeObjectURLSpy;
 
     render(<InteractiveSheet character={mockCharacter} />);
 
-    const downloadBtn = screen.getByRole('button', { name: /Скачать официальный PDF|Скачать PDF/i });
+    const downloadBtn = screen.getByTestId('lss-download-btn');
+    expect(downloadBtn).toBeDefined();
     fireEvent.click(downloadBtn);
 
-    await waitFor(() => {
-      expect(fetchSpy).toHaveBeenCalledWith(
-        '/api/export-pdf',
-        expect.objectContaining({
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-        })
-      );
+    expect(createObjectURLSpy).toHaveBeenCalled();
+    expect(revokeObjectURLSpy).toHaveBeenCalled();
+  });
+
+  it('copies Long Story Short JSON to clipboard when clicking copy button', async () => {
+    const writeTextSpy = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: writeTextSpy },
+      configurable: true,
+      writable: true,
     });
 
-    expect(createObjectURLSpy).toHaveBeenCalled();
+    render(<InteractiveSheet character={mockCharacter} />);
+
+    const copyBtn = screen.getByTestId('lss-copy-btn');
+    fireEvent.click(copyBtn);
+
+    await waitFor(() => {
+      expect(writeTextSpy).toHaveBeenCalled();
+      const copiedJson = JSON.parse(writeTextSpy.mock.calls[0][0]);
+      expect(copiedJson.jsonType).toBe('character');
+      expect(copiedJson.edition).toBe('2024');
+    });
+  });
+
+  it('renders gender and appearance customization badges', () => {
+    render(<InteractiveSheet character={mockCharacter} />);
+
+    const genderBadge = screen.getByTestId('character-gender-badge');
+    expect(genderBadge.textContent).toContain('Мужской');
+
+    const appearanceBlock = screen.getByTestId('character-appearance-block');
+    expect(appearanceBlock.textContent).toContain('45 лет');
+    expect(appearanceBlock.textContent).toContain('Массивное');
+    expect(appearanceBlock.textContent).toContain('Рыжая борода, карие глаза');
+    expect(appearanceBlock.textContent).toContain('Шрам от секиры');
+  });
+
+  it('provides a link to longstoryshort.app', () => {
+    render(<InteractiveSheet character={mockCharacter} />);
+
+    const link = screen.getByTestId('lss-link') as HTMLAnchorElement;
+    expect(link.href).toBe('https://longstoryshort.app/');
+    expect(link.target).toBe('_blank');
   });
 
   it('opens and closes ShareKeyModal displaying the HERO-XXXX key and copy button', async () => {

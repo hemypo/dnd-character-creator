@@ -388,6 +388,115 @@ export const ArchetypeSelector: React.FC<ArchetypeSelectorProps> = ({
             </div>
           </div>
 
+          {/* Gender Selection */}
+          <div className="p-4 rounded-xl border border-slate-800 bg-slate-900/80 space-y-2">
+            <label className="block text-xs font-medium text-slate-300 tracking-wide uppercase">
+              Пол персонажа
+            </label>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { id: 'Мужской', label: '👨 Мужской' },
+                { id: 'Женский', label: '👩 Женский' },
+                { id: 'Небинарный', label: '✨ Небинарный' },
+              ].map((g) => (
+                <button
+                  key={g.id}
+                  type="button"
+                  onClick={() =>
+                    onChange({
+                      ...selection,
+                      gender: g.id,
+                      appearance: { ...selection.appearance, gender: g.id },
+                    })
+                  }
+                  className={`py-2 px-3 rounded-lg border text-xs sm:text-sm font-medium transition-all cursor-pointer ${
+                    (selection.gender || 'Мужской') === g.id
+                      ? 'border-amber-400 bg-amber-500/15 text-amber-300 shadow-sm'
+                      : 'border-slate-800 bg-slate-950/60 text-slate-400 hover:text-slate-200 hover:border-slate-700'
+                  }`}
+                >
+                  {g.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Appearance Customization */}
+          <div className="p-4 rounded-xl border border-slate-800 bg-slate-900/80 space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5" /> Внешность и приметы
+              </label>
+              <span className="text-[11px] text-slate-500">Для портрета и предыстории</span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <span className="text-[11px] text-slate-400">Возраст:</span>
+                <input
+                  type="text"
+                  placeholder="25 лет"
+                  value={selection.appearance?.age || ''}
+                  onChange={(e) =>
+                    onChange({
+                      ...selection,
+                      appearance: { ...selection.appearance, age: e.target.value },
+                    })
+                  }
+                  className="w-full px-3 py-1.5 text-xs text-slate-200 bg-slate-950 border border-slate-700 rounded-lg focus:outline-none focus:border-amber-400"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <span className="text-[11px] text-slate-400">Телосложение:</span>
+                <input
+                  type="text"
+                  placeholder="Атлетичное, жилистое"
+                  value={selection.appearance?.build || ''}
+                  onChange={(e) =>
+                    onChange({
+                      ...selection,
+                      appearance: { ...selection.appearance, build: e.target.value },
+                    })
+                  }
+                  className="w-full px-3 py-1.5 text-xs text-slate-200 bg-slate-950 border border-slate-700 rounded-lg focus:outline-none focus:border-amber-400"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <span className="text-[11px] text-slate-400">Волосы и глаза:</span>
+              <input
+                type="text"
+                placeholder="Смоляные черные волосы, серые глаза"
+                value={selection.appearance?.hairAndEyes || ''}
+                onChange={(e) =>
+                  onChange({
+                    ...selection,
+                    appearance: { ...selection.appearance, hairAndEyes: e.target.value },
+                  })
+                }
+                className="w-full px-3 py-1.5 text-xs text-slate-200 bg-slate-950 border border-slate-700 rounded-lg focus:outline-none focus:border-amber-400"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <span className="text-[11px] text-slate-400">Особые приметы и шрамы:</span>
+              <input
+                type="text"
+                placeholder="Боевой шрам через бровь, татуировки"
+                value={selection.appearance?.distinguishingFeatures || ''}
+                onChange={(e) =>
+                  onChange({
+                    ...selection,
+                    appearance: { ...selection.appearance, distinguishingFeatures: e.target.value },
+                  })
+                }
+                className="w-full px-3 py-1.5 text-xs text-slate-200 bg-slate-950 border border-slate-700 rounded-lg focus:outline-none focus:border-amber-400"
+              />
+            </div>
+          </div>
+
           <div className="flex items-center justify-between pt-2">
             <button
               type="button"

@@ -19,9 +19,13 @@ import {
   Loader2,
   Coins,
   RotateCcw,
+  Copy,
+  Check,
+  ExternalLink,
 } from 'lucide-react';
 import { Character, AbilityScores } from '@/types/character';
 import { calculateModifier } from '@/lib/dnd2024/rulesEngine';
+import { formatLssJson } from '@/lib/lss/lssExporter';
 import { ActionCards } from './ActionCards';
 import { ShareKeyModal } from './ShareKeyModal';
 import { CompendiumModal } from './CompendiumModal';
@@ -104,7 +108,7 @@ export function InteractiveSheet({ character }: InteractiveSheetProps) {
   const [notes, setNotes] = useState<string>(() => character.notes ?? '');
   const [isCompendiumOpen, setIsCompendiumOpen] = useState(false);
   const [isShareOpen, setIsShareOpen] = useState(false);
-  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
+  const [isCopiedLss, setIsCopiedLss] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
 
@@ -170,37 +174,49 @@ export function InteractiveSheet({ character }: InteractiveSheetProps) {
     setCurrentHp((prev) => Math.min(maxHp, prev + 1));
   };
 
-  const handleDownloadPdf = async () => {
+  const handleDownloadLss = () => {
     try {
-      setIsDownloadingPdf(true);
       setDownloadError(null);
-
-      const response = await fetch('/api/export-pdf', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ character: { ...character, hp: currentHp, tempHp, coins, notes } }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Не удалось сформировать PDF');
-      }
-
-      const blob = await response.blob();
+      const liveChar: Character = {
+        ...character,
+        hp: currentHp,
+        currentHp,
+        tempHp,
+        coins,
+        notes,
+      };
+      const jsonStr = formatLssJson(liveChar);
+      const blob = new Blob([jsonStr], { type: 'application/json' });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `${character.name || 'character'}_2024.pdf`;
+      link.download = `${character.name || 'character'}_lss.json`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
     } catch (err) {
-      console.error('PDF export failed:', err);
-      setDownloadError('Ошибка при создании PDF. Попробуйте еще раз.');
-    } finally {
-      setIsDownloadingPdf(false);
+      console.error('Failed to export Long Story Short JSON:', err);
+      setDownloadError('Ошибка при создании JSON для Long Story Short.');
+    }
+  };
+
+  const handleCopyLss = async () => {
+    try {
+      const liveChar: Character = {
+        ...character,
+        hp: currentHp,
+        currentHp,
+        tempHp,
+        coins,
+        notes,
+      };
+      const jsonStr = formatLssJson(liveChar);
+      await navigator.clipboard.writeText(jsonStr);
+      setIsCopiedLss(true);
+      setTimeout(() => setIsCopiedLss(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy LSS JSON:', err);
     }
   };
 
@@ -262,34 +278,57 @@ export function InteractiveSheet({ character }: InteractiveSheetProps) {
           )}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => setIsCompendiumOpen(true)}
             data-testid="compendium-trigger"
-            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 font-semibold text-xs sm:text-sm transition-all active:scale-95 cursor-pointer"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 font-semibold text-xs sm:text-sm transition-all active:scale-95 cursor-pointer"
             title="Открыть справочник правил D&D 2024"
           >
             <BookOpen className="w-4 h-4 text-amber-400" />
-            <span>Справочник D&D 2024</span>
+            <span className="hidden sm:inline">Справочник D&D 2024</span>
+            <span className="sm:hidden">Справочник</span>
           </button>
 
           <button
-            onClick={handleDownloadPdf}
-            disabled={isDownloadingPdf}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold text-xs sm:text-sm transition-all shadow-md active:scale-95 disabled:opacity-50"
+            onClick={handleCopyLss}
+            data-testid="lss-copy-btn"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-medium text-xs sm:text-sm transition-all active:scale-95 cursor-pointer"
+            title="Скопировать JSON персонажа для Long Story Short"
           >
-            {isDownloadingPdf ? (
+            {isCopiedLss ? (
               <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Генерация PDF...</span>
+                <Check className="w-3.5 h-3.5 text-emerald-400" />
+                <span className="text-emerald-300">Скопировано!</span>
               </>
             ) : (
               <>
-                <Download className="w-4 h-4" />
-                <span>Скачать официальный PDF</span>
+                <Copy className="w-3.5 h-3.5 text-slate-400" />
+                <span>JSON</span>
               </>
             )}
           </button>
+
+          <button
+            onClick={handleDownloadLss}
+            data-testid="lss-download-btn"
+            className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold text-xs sm:text-sm transition-all shadow-md active:scale-95 cursor-pointer"
+            title="Скачать JSON для импорта в Long Story Short"
+          >
+            <Download className="w-4 h-4" />
+            <span>Long Story Short</span>
+          </button>
+
+          <a
+            href="https://longstoryshort.app"
+            target="_blank"
+            rel="noopener noreferrer"
+            data-testid="lss-link"
+            className="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-amber-400 transition-colors"
+            title="Открыть сайт longstoryshort.app"
+          >
+            <ExternalLink className="w-4 h-4" />
+          </a>
         </div>
       </div>
 
@@ -341,6 +380,14 @@ export function InteractiveSheet({ character }: InteractiveSheetProps) {
                   ⚖️ {character.alignment}
                 </span>
               )}
+              {character.gender && (
+                <span
+                  data-testid="character-gender-badge"
+                  className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-800 text-slate-300 border border-slate-700/60"
+                >
+                  {character.gender}
+                </span>
+              )}
             </div>
 
             <h1 className="text-2xl sm:text-4xl font-serif font-black text-slate-100 tracking-tight">
@@ -350,6 +397,37 @@ export function InteractiveSheet({ character }: InteractiveSheetProps) {
             <p className="text-xs sm:text-sm text-slate-400">
               Черта происхождения: <strong className="text-slate-200">{character.originFeat}</strong>
             </p>
+
+            {(character.appearance?.age ||
+              character.appearance?.build ||
+              character.appearance?.hairAndEyes ||
+              character.appearance?.distinguishingFeatures) && (
+              <div
+                data-testid="character-appearance-block"
+                className="flex flex-wrap items-center justify-center sm:justify-start gap-1.5 pt-1 text-[11px] text-slate-400"
+              >
+                {character.appearance.age && (
+                  <span className="px-2 py-0.5 rounded-md bg-slate-950/70 border border-slate-800 text-slate-300">
+                    Возраст: {character.appearance.age}
+                  </span>
+                )}
+                {character.appearance.build && (
+                  <span className="px-2 py-0.5 rounded-md bg-slate-950/70 border border-slate-800 text-slate-300">
+                    Телосложение: {character.appearance.build}
+                  </span>
+                )}
+                {character.appearance.hairAndEyes && (
+                  <span className="px-2 py-0.5 rounded-md bg-slate-950/70 border border-slate-800 text-slate-300">
+                    Внешность: {character.appearance.hairAndEyes}
+                  </span>
+                )}
+                {character.appearance.distinguishingFeatures && (
+                  <span className="px-2 py-0.5 rounded-md bg-slate-950/70 border border-slate-800 text-amber-300/90">
+                    Приметы: {character.appearance.distinguishingFeatures}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </section>

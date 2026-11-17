@@ -219,10 +219,10 @@ export default function HomePage() {
               <FileText className="w-5 h-5" />
             </div>
             <h3 className="text-lg font-serif font-bold text-slate-100">
-              Официальный PDF
+              Экспорт в Long Story Short
             </h3>
             <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
-              Скачивайте готовый официальный бланк персонажа D&D 2024 в 1 клик с полной кириллицей и встроенным портретом героя.
+              Экспортируйте персонажа в формат JSON для мгновенного импорта в Long Story Short (longstoryshort.app) с полной синхронизацией правил D&D 2024.
             </p>
           </div>
         </section>

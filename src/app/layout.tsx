@@ -4,7 +4,7 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: 'D&D 2024 Генератор персонажей | Character Weave',
-  description: 'Создайте уникального героя 1-го уровня по правилам D&D 2024 за считанные минуты с кастомными механиками и официальным PDF.',
+  description: 'Создайте уникального героя 1-го уровня по правилам D&D 2024 за считанные минуты с кастомными механиками, портретом и экспортом в Long Story Short.',
 };
 
 export const viewport: Viewport = {

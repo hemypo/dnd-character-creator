@@ -1,9 +1,13 @@
+import { CharacterAppearance } from './character';
+
 export interface ArchetypeSelection {
   roleId: string;
   powerSourceId: string;
   speciesId: string;
   characterName?: string;
   alignment?: string;
+  gender?: string;
+  appearance?: CharacterAppearance;
   backgroundId?: string;
 }
 
@@ -46,6 +50,8 @@ export interface QuizResult {
   speciesId: string;
   backgroundId: string;
   characterName: string;
+  gender?: string;
+  appearance?: CharacterAppearance;
   summaryTitle: string;
   summaryDescription: string;
 }
