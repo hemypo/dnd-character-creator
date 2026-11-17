@@ -1,5 +1,6 @@
 import React from 'react';
 import type { Metadata, Viewport } from 'next';
+import './globals.css';
 
 export const metadata: Metadata = {
   title: 'D&D 2024 Генератор персонажей | Character Weave',
