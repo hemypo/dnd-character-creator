@@ -205,6 +205,116 @@ describe('InteractiveSheet Component', () => {
     expect(hpDisplay.textContent).toContain('/ 1');
     expect(screen.getByText(/Инициатива|Initiative/i)).toBeDefined();
   });
+
+  it('opens D&D 2024 CompendiumModal when clicking the compendium trigger and allows searching spells', async () => {
+    render(<InteractiveSheet character={mockCharacter} />);
+
+    const compendiumBtn = screen.getByTestId('compendium-trigger');
+    expect(compendiumBtn).toBeDefined();
+
+    fireEvent.click(compendiumBtn);
+
+    // Modal dialog is open
+    await waitFor(() => {
+      expect(screen.getByRole('dialog')).toBeDefined();
+    });
+
+    // Check tabs
+    expect(screen.getByTestId('tab-spells')).toBeDefined();
+    expect(screen.getByTestId('tab-masteries')).toBeDefined();
+    expect(screen.getByTestId('tab-conditions')).toBeDefined();
+    expect(screen.getByTestId('tab-actions')).toBeDefined();
+
+    // Switch to weapon masteries tab
+    fireEvent.click(screen.getByTestId('tab-masteries'));
+    expect(screen.getAllByText(/Topple/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/Nick/i).length).toBeGreaterThanOrEqual(1);
+
+    // Close compendium
+    const closeBtn = screen.getByRole('button', { name: /Закрыть справочник|✕/i });
+    fireEvent.click(closeBtn);
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).toBeNull();
+    });
+  });
+
+  it('allows live editing: temp HP counter, coins wallet, and notes with auto-persistence', async () => {
+    const fetchSpy = vi.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({ success: true }),
+    } as unknown as Response);
+
+    render(<InteractiveSheet character={mockCharacter} />);
+
+    // Temp HP test
+    const tempHpDisplay = screen.getByTestId('temp-hp-display');
+    expect(tempHpDisplay.textContent).toContain('0');
+
+    const tempPlus = screen.getByTestId('temp-hp-increase-btn');
+    const tempMinus = screen.getByTestId('temp-hp-decrease-btn');
+
+    fireEvent.click(tempPlus);
+    expect(tempHpDisplay.textContent).toContain('1');
+
+    fireEvent.click(tempPlus);
+    expect(tempHpDisplay.textContent).toContain('2');
+
+    fireEvent.click(tempMinus);
+    expect(tempHpDisplay.textContent).toContain('1');
+
+    // Coins wallet test
+    const gpDisplay = screen.getByTestId('coin-gp-display');
+    const gpInc = screen.getByTestId('coin-gp-inc');
+    const gpDec = screen.getByTestId('coin-gp-dec');
+
+    expect(gpDisplay).toBeDefined();
+    fireEvent.click(gpInc);
+    fireEvent.click(gpDec);
+
+    // Notes test
+    const notesInput = screen.getByTestId('character-notes-input');
+    fireEvent.change(notesInput, { target: { value: 'Найдено 50 золотых в склепе.' } });
+    expect((notesInput as HTMLTextAreaElement).value).toBe('Найдено 50 золотых в склепе.');
+
+    // Wait for debounced sync or trigger
+    await waitFor(() => {
+      expect(fetchSpy).toHaveBeenCalledWith(
+        expect.stringContaining('/api/characters/HERO-7788'),
+        expect.objectContaining({ method: 'PATCH' })
+      );
+    });
+
+    // Check localStorage was populated
+    const saved = window.localStorage.getItem(`dnd_char_${mockCharacter.key}`);
+    expect(saved).not.toBeNull();
+    const parsed = JSON.parse(saved!);
+    expect(parsed.notes).toBe('Найдено 50 золотых в склепе.');
+    expect(parsed.tempHp).toBe(1);
+  });
+
+  it('renders and tracks spell slots for a spellcaster class', () => {
+    const wizardCharacter: Character = {
+      ...mockCharacter,
+      id: 'char-wizard-1',
+      key: 'HERO-WIZ1',
+      characterClass: 'wizard',
+      spellSlots: { level1Max: 2, level1Used: 0 },
+    };
+
+    render(<InteractiveSheet character={wizardCharacter} />);
+
+    // Spell slots section should be visible for wizard
+    const slot0 = screen.getByTestId('spell-slot-checkbox-0');
+    expect(slot0).toBeDefined();
+
+    // Click slot to expend it
+    fireEvent.click(slot0);
+
+    // Reset button restores slots
+    const resetBtn = screen.getByTestId('reset-spell-slots-btn');
+    expect(resetBtn).toBeDefined();
+    fireEvent.click(resetBtn);
+  });
 });
 
 describe('ActionCards Component', () => {

@@ -118,7 +118,9 @@ export const WizardContainer: React.FC<WizardContainerProps> = ({
       setAssemblyProgress('Создание портрета персонажа...');
       let portraitUrl = '';
 
-      if (photoValue.mode === 'preset' && photoValue.portraitUrl) {
+      if (photoValue.portraitUrl) {
+        portraitUrl = photoValue.portraitUrl;
+      } else if (photoValue.mode === 'preset' && photoValue.portraitUrl) {
         portraitUrl = photoValue.portraitUrl;
       } else if (photoValue.photoBase64 || photoValue.mode === 'photo' || photoValue.mode === 'ai-prompt') {
         if (!isTestEnv || isFetchMocked) {
@@ -316,6 +318,7 @@ export const WizardContainer: React.FC<WizardContainerProps> = ({
                 onChange={setPhotoValue}
                 species={selection.speciesId}
                 characterClass={previewChassis?.characterClass || 'fighter'}
+                characterName={selection.characterName || 'Герой'}
                 onBack={() => {
                   setMainStep(2);
                 }}

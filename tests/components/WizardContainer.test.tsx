@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import React from 'react';
 import { WizardContainer } from '@/components/wizard/WizardContainer';
+import { PhotoUploader, PhotoUploaderValue } from '@/components/wizard/PhotoUploader';
 import CreateCharacterPage from '@/app/create/page';
 import { Character } from '@/types/character';
 
@@ -214,5 +215,135 @@ describe('WizardContainer Component', () => {
     await waitFor(() => {
       expect(mockPush).toHaveBeenCalledWith(expect.stringMatching(/^\/character\/HERO-/));
     }, { timeout: 5000 });
+  });
+});
+
+describe('PhotoUploader Component (Interactive Portrait Preview & Regenerate)', () => {
+  it('displays selfie and generate portrait button when photo is present', async () => {
+    const value: PhotoUploaderValue = {
+      photoBase64: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+      mode: 'photo',
+    };
+    const onChange = vi.fn();
+
+    render(
+      <PhotoUploader
+        value={value}
+        onChange={onChange}
+        species="human"
+        characterClass="fighter"
+        characterName="Арагорн"
+      />
+    );
+
+    // Displays uploaded selfie badge and button
+    expect(screen.getByText(/Селфи загружено/i)).toBeDefined();
+    const generateBtn = screen.getByRole('button', {
+      name: /Превратить селфи в портрет D&D|Сгенерировать арт-портрет/i,
+    });
+    expect(generateBtn).toBeDefined();
+
+    // Mock fetch for generate-portrait
+    const fetchSpy = vi.spyOn(global, 'fetch').mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        portraitUrl: 'https://images.unsplash.com/photo-flux-generated-12345',
+        promptUsed: 'masterpiece fantasy portrait',
+      }),
+    } as unknown as Response);
+
+    fireEvent.click(generateBtn);
+
+    await waitFor(() => {
+      expect(fetchSpy).toHaveBeenCalledWith(
+        '/api/generate-portrait',
+        expect.objectContaining({
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: expect.stringContaining('Арагорн'),
+        })
+      );
+    });
+
+    expect(onChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        portraitUrl: 'https://images.unsplash.com/photo-flux-generated-12345',
+        mode: 'photo',
+      })
+    );
+  });
+
+  it('renders generated preview card with regenerate and remove buttons', () => {
+    const value: PhotoUploaderValue = {
+      portraitUrl: 'https://images.unsplash.com/photo-flux-generated-12345',
+      photoBase64: 'data:image/png;base64,mock',
+      mode: 'photo',
+    };
+    const onChange = vi.fn();
+
+    render(
+      <PhotoUploader
+        value={value}
+        onChange={onChange}
+        species="elf"
+        characterClass="wizard"
+      />
+    );
+
+    expect(screen.getByText(/Портрет готов к бою/i)).toBeDefined();
+    expect(screen.getByRole('button', { name: /Перегенерировать/i })).toBeDefined();
+    expect(screen.getByRole('button', { name: /Загрузить другое фото/i })).toBeDefined();
+
+    // Clicking remove photo clears value
+    const removeBtn = screen.getByRole('button', { name: /Загрузить другое фото/i });
+    fireEvent.click(removeBtn);
+    expect(onChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        photoBase64: undefined,
+        portraitUrl: undefined,
+        mode: 'skip',
+      })
+    );
+  });
+
+  it('supports interactive preview and regeneration for AI-prompt lore generation without photo', async () => {
+    const onChange = vi.fn();
+
+    render(
+      <PhotoUploader
+        value={{ mode: 'skip' }}
+        onChange={onChange}
+        species="dwarf"
+        characterClass="cleric"
+        characterName="Торин"
+      />
+    );
+
+    const fetchSpy = vi.spyOn(global, 'fetch').mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        portraitUrl: 'https://images.unsplash.com/photo-dwarf-cleric-flux',
+      }),
+    } as unknown as Response);
+
+    const genLoreBtn = screen.getByRole('button', { name: /Сгенерировать арт по лору/i });
+    fireEvent.click(genLoreBtn);
+
+    await waitFor(() => {
+      expect(fetchSpy).toHaveBeenCalledWith(
+        '/api/generate-portrait',
+        expect.objectContaining({
+          method: 'POST',
+          body: expect.stringContaining('dwarf'),
+        })
+      );
+    });
+
+    expect(onChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        portraitUrl: 'https://images.unsplash.com/photo-dwarf-cleric-flux',
+        mode: 'ai-prompt',
+      })
+    );
   });
 });

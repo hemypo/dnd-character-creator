@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Heart,
   Shield,
@@ -17,11 +17,14 @@ import {
   Key,
   User,
   Loader2,
+  Coins,
+  RotateCcw,
 } from 'lucide-react';
 import { Character, AbilityScores } from '@/types/character';
 import { calculateModifier } from '@/lib/dnd2024/rulesEngine';
 import { ActionCards } from './ActionCards';
 import { ShareKeyModal } from './ShareKeyModal';
+import { CompendiumModal } from './CompendiumModal';
 
 export interface InteractiveSheetProps {
   character: Character;
@@ -76,14 +79,88 @@ const BACKGROUND_RU: Record<string, string> = {
 export function InteractiveSheet({ character }: InteractiveSheetProps) {
   const maxHp = Math.max(1, character.maxHp || character.hp || 1);
   const [currentHp, setCurrentHp] = useState<number>(() =>
-    Math.min(maxHp, Math.max(0, character.hp ?? maxHp))
+    Math.min(maxHp, Math.max(0, character.currentHp ?? character.hp ?? maxHp))
   );
+  const [tempHp, setTempHp] = useState<number>(() => character.tempHp ?? 0);
+  const [coins, setCoins] = useState(() => character.coins ?? { gp: 10, sp: 0, cp: 0 });
+
+  const isCaster = [
+    'wizard',
+    'cleric',
+    'druid',
+    'bard',
+    'sorcerer',
+    'warlock',
+    'paladin',
+    'ranger',
+  ].includes(character.characterClass.toLowerCase());
+
+  const defaultMaxSlots = character.characterClass.toLowerCase() === 'warlock' ? 1 : 2;
+  const [spellSlots, setSpellSlots] = useState(() => ({
+    level1Max: character.spellSlots?.level1Max ?? defaultMaxSlots,
+    level1Used: character.spellSlots?.level1Used ?? 0,
+  }));
+
+  const [notes, setNotes] = useState<string>(() => character.notes ?? '');
+  const [isCompendiumOpen, setIsCompendiumOpen] = useState(false);
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
 
   const dexMod = calculateModifier(character.abilityScores?.dexterity ?? 10);
   const formatBonus = (val: number) => (val >= 0 ? `+${val}` : `${val}`);
+
+  // Auto-persistence: save to localStorage and debounced PATCH to server
+  const isFirstRender = useRef(true);
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+
+    const payload = {
+      hp: currentHp,
+      currentHp,
+      tempHp,
+      coins,
+      spellSlots: isCaster ? spellSlots : undefined,
+      notes,
+    };
+
+    // Save to localStorage immediately
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const key = `dnd_char_${character.key}`;
+        const stored = window.localStorage.getItem(key);
+        const prev = stored ? JSON.parse(stored) : { ...character };
+        window.localStorage.setItem(key, JSON.stringify({ ...prev, ...payload }));
+      }
+    } catch {
+      // localStorage error fallback
+    }
+
+    // Debounced PATCH /api/characters/[key]
+    setSyncStatus('saving');
+    const timer = setTimeout(async () => {
+      try {
+        if (typeof window !== 'undefined' && typeof fetch === 'function') {
+          await fetch(`/api/characters/${character.key}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+        }
+        setSyncStatus('saved');
+        setTimeout(() => setSyncStatus('idle'), 2000);
+      } catch (err) {
+        console.error('Failed to sync live character stats:', err);
+        setSyncStatus('idle');
+      }
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [currentHp, tempHp, coins, spellSlots, notes, character.key, isCaster]);
 
   const handleDecreaseHp = () => {
     setCurrentHp((prev) => Math.max(0, prev - 1));
@@ -103,7 +180,7 @@ export function InteractiveSheet({ character }: InteractiveSheetProps) {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ character: { ...character, hp: currentHp } }),
+        body: JSON.stringify({ character: { ...character, hp: currentHp, tempHp, coins, notes } }),
       });
 
       if (!response.ok) {
@@ -173,9 +250,29 @@ export function InteractiveSheet({ character }: InteractiveSheetProps) {
           <span className="text-xs text-slate-400 hidden sm:inline">
             1-й уровень D&D 2024
           </span>
+          {syncStatus === 'saving' && (
+            <span className="text-xs text-amber-400/80 animate-pulse hidden md:inline">
+              Синхронизация...
+            </span>
+          )}
+          {syncStatus === 'saved' && (
+            <span className="text-xs text-emerald-400 hidden md:inline">
+              ✓ Сохранено
+            </span>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setIsCompendiumOpen(true)}
+            data-testid="compendium-trigger"
+            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 font-semibold text-xs sm:text-sm transition-all active:scale-95 cursor-pointer"
+            title="Открыть справочник правил D&D 2024"
+          >
+            <BookOpen className="w-4 h-4 text-amber-400" />
+            <span>Справочник D&D 2024</span>
+          </button>
+
           <button
             onClick={handleDownloadPdf}
             disabled={isDownloadingPdf}
@@ -334,6 +431,32 @@ export function InteractiveSheet({ character }: InteractiveSheetProps) {
             </button>
           </div>
 
+          {/* Temp HP Controls */}
+          <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs">
+            <span className="text-amber-400 font-medium">Временные:</span>
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => setTempHp((prev) => Math.max(0, prev - 1))}
+                data-testid="temp-hp-decrease-btn"
+                className="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center justify-center font-bold text-sm active:scale-95 border border-slate-700"
+                aria-label="Уменьшить временные хиты"
+              >
+                -
+              </button>
+              <span data-testid="temp-hp-display" className="font-mono font-bold text-amber-300 w-6 text-center text-sm">
+                {tempHp}
+              </span>
+              <button
+                onClick={() => setTempHp((prev) => prev + 1)}
+                data-testid="temp-hp-increase-btn"
+                className="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center justify-center font-bold text-sm active:scale-95 border border-slate-700"
+                aria-label="Увеличить временные хиты"
+              >
+                +
+              </button>
+            </div>
+          </div>
+
           {/* Progress mini bar */}
           <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
             <div
@@ -412,6 +535,184 @@ export function InteractiveSheet({ character }: InteractiveSheetProps) {
         </section>
       )}
 
+      {/* Spell Slots Tracker (for Spellcaster classes in D&D 2024) */}
+      {isCaster && (
+        <section className="bg-slate-900/80 border border-indigo-900/40 rounded-2xl p-4 sm:p-5 shadow-sm space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-indigo-400" />
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-indigo-300 font-serif">
+                Ячейки заклинаний 1-го уровня ({spellSlots.level1Max - spellSlots.level1Used}/{spellSlots.level1Max})
+              </h3>
+            </div>
+            <button
+              onClick={() => setSpellSlots((prev) => ({ ...prev, level1Used: 0 }))}
+              data-testid="reset-spell-slots-btn"
+              className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-amber-400 transition-colors cursor-pointer bg-slate-800/60 px-2.5 py-1 rounded-lg border border-slate-700/60"
+              title="Восстановить ячейки после долгого отдыха"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Долгий отдых (сброс)</span>
+            </button>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            {Array.from({ length: spellSlots.level1Max }).map((_, index) => {
+              const isUsed = index < spellSlots.level1Used;
+              return (
+                <button
+                  key={index}
+                  type="button"
+                  data-testid={`spell-slot-checkbox-${index}`}
+                  onClick={() => {
+                    setSpellSlots((prev) => {
+                      const newUsed = isUsed ? index : Math.min(prev.level1Max, index + 1);
+                      return { ...prev, level1Used: newUsed };
+                    });
+                  }}
+                  className={`flex items-center gap-2.5 px-3.5 py-2 rounded-xl border text-xs font-medium transition-all cursor-pointer ${
+                    isUsed
+                      ? 'bg-slate-950 border-slate-800 text-slate-500 line-through'
+                      : 'bg-indigo-950/40 border-indigo-500/50 text-indigo-200 shadow-sm shadow-indigo-500/10 hover:border-indigo-400'
+                  }`}
+                >
+                  <span
+                    className={`w-4 h-4 rounded-full border flex items-center justify-center transition-colors ${
+                      isUsed
+                        ? 'border-slate-700 bg-transparent'
+                        : 'border-indigo-400 bg-indigo-500 shadow-sm shadow-indigo-400/50'
+                    }`}
+                  />
+                  <span>
+                    Слот #{index + 1} {isUsed ? '(израсходован)' : '(доступен)'}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {/* Coins Wallet (ЗМ, СМ, ММ) */}
+      <section className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-sm space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Coins className="w-4 h-4 text-amber-400" />
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 font-serif">
+              Кошелёк и монеты
+            </h3>
+          </div>
+          <span className="text-[11px] text-slate-500">Быстрое изменение хитов и баланса</span>
+        </div>
+
+        <div className="grid grid-cols-3 gap-2 sm:gap-4">
+          {/* GP */}
+          <div className="bg-slate-950/70 border border-amber-500/30 rounded-xl p-3 text-center space-y-1">
+            <span className="text-[11px] font-bold tracking-wider text-amber-400 uppercase block">
+              Золото (ЗМ)
+            </span>
+            <div data-testid="coin-gp-display" className="text-xl sm:text-2xl font-mono font-bold text-amber-300">
+              {coins.gp}
+            </div>
+            <div className="flex items-center justify-center gap-1.5 pt-1">
+              <button
+                onClick={() => setCoins((prev) => ({ ...prev, gp: Math.max(0, prev.gp - 1) }))}
+                data-testid="coin-gp-dec"
+                className="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold flex items-center justify-center cursor-pointer border border-slate-700 active:scale-95"
+                aria-label="Уменьшить золото"
+              >
+                -
+              </button>
+              <button
+                onClick={() => setCoins((prev) => ({ ...prev, gp: prev.gp + 1 }))}
+                data-testid="coin-gp-inc"
+                className="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold flex items-center justify-center cursor-pointer border border-slate-700 active:scale-95"
+                aria-label="Увеличить золото"
+              >
+                +
+              </button>
+            </div>
+          </div>
+
+          {/* SP */}
+          <div className="bg-slate-950/70 border border-slate-700 rounded-xl p-3 text-center space-y-1">
+            <span className="text-[11px] font-bold tracking-wider text-slate-300 uppercase block">
+              Серебро (СМ)
+            </span>
+            <div data-testid="coin-sp-display" className="text-xl sm:text-2xl font-mono font-bold text-slate-200">
+              {coins.sp}
+            </div>
+            <div className="flex items-center justify-center gap-1.5 pt-1">
+              <button
+                onClick={() => setCoins((prev) => ({ ...prev, sp: Math.max(0, prev.sp - 1) }))}
+                data-testid="coin-sp-dec"
+                className="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold flex items-center justify-center cursor-pointer border border-slate-700 active:scale-95"
+                aria-label="Уменьшить серебро"
+              >
+                -
+              </button>
+              <button
+                onClick={() => setCoins((prev) => ({ ...prev, sp: prev.sp + 1 }))}
+                data-testid="coin-sp-inc"
+                className="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold flex items-center justify-center cursor-pointer border border-slate-700 active:scale-95"
+                aria-label="Увеличить серебро"
+              >
+                +
+              </button>
+            </div>
+          </div>
+
+          {/* CP */}
+          <div className="bg-slate-950/70 border border-amber-900/40 rounded-xl p-3 text-center space-y-1">
+            <span className="text-[11px] font-bold tracking-wider text-amber-600 uppercase block">
+              Медь (ММ)
+            </span>
+            <div data-testid="coin-cp-display" className="text-xl sm:text-2xl font-mono font-bold text-amber-500">
+              {coins.cp}
+            </div>
+            <div className="flex items-center justify-center gap-1.5 pt-1">
+              <button
+                onClick={() => setCoins((prev) => ({ ...prev, cp: Math.max(0, prev.cp - 1) }))}
+                data-testid="coin-cp-dec"
+                className="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold flex items-center justify-center cursor-pointer border border-slate-700 active:scale-95"
+                aria-label="Уменьшить медь"
+              >
+                -
+              </button>
+              <button
+                onClick={() => setCoins((prev) => ({ ...prev, cp: prev.cp + 1 }))}
+                data-testid="coin-cp-inc"
+                className="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold flex items-center justify-center cursor-pointer border border-slate-700 active:scale-95"
+                aria-label="Увеличить медь"
+              >
+                +
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Notes & Adventure Loot Textarea */}
+      <section className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-sm space-y-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Scroll className="w-4 h-4 text-amber-400" />
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 font-serif">
+              Заметки приключения и добыча
+            </h3>
+          </div>
+          <span className="text-[11px] text-slate-500">Автосохранение</span>
+        </div>
+        <textarea
+          data-testid="character-notes-input"
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          placeholder="Записывайте найденные артефакты, подсказки Мастера, долги, имена NPC..."
+          rows={4}
+          className="w-full bg-slate-950/80 border border-slate-800 rounded-xl p-3 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/50 resize-y"
+        />
+      </section>
+
       {/* Combat Actions & Inventory Cards */}
       <ActionCards
         characterClass={character.characterClass}
@@ -439,6 +740,13 @@ export function InteractiveSheet({ character }: InteractiveSheetProps) {
         characterKey={character.key}
         characterName={character.name}
         onClose={() => setIsShareOpen(false)}
+      />
+
+      {/* D&D 2024 Compendium & Table Cheat Sheet Modal */}
+      <CompendiumModal
+        isOpen={isCompendiumOpen}
+        onClose={() => setIsCompendiumOpen(false)}
+        characterClass={character.characterClass}
       />
     </div>
   );

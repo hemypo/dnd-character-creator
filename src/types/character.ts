@@ -55,6 +55,17 @@ export interface AbilityScores {
   charisma: number;
 }
 
+export interface CharacterCoins {
+  gp: number;
+  sp: number;
+  cp: number;
+}
+
+export interface CharacterSpellSlots {
+  level1Max: number;
+  level1Used: number;
+}
+
 export interface Character {
   id: string;
   key: string;
@@ -65,6 +76,7 @@ export interface Character {
   abilityScores: AbilityScores;
   hp: number;
   maxHp: number;
+  currentHp?: number;
   ac: number;
   speed: number;
   originFeat: string;
@@ -72,6 +84,10 @@ export interface Character {
   backstory?: string;
   portraitUrl?: string;
   createdAt: string;
+  tempHp?: number;
+  coins?: CharacterCoins;
+  spellSlots?: CharacterSpellSlots;
+  notes?: string;
 }
 
 export interface CreateCharacterInput {
@@ -84,6 +100,7 @@ export interface CreateCharacterInput {
   abilityScores?: Partial<AbilityScores>;
   hp?: number;
   maxHp?: number;
+  currentHp?: number;
   ac?: number;
   speed?: number;
   originFeat?: string;
@@ -91,6 +108,10 @@ export interface CreateCharacterInput {
   backstory?: string;
   portraitUrl?: string;
   createdAt?: string;
+  tempHp?: number;
+  coins?: CharacterCoins;
+  spellSlots?: CharacterSpellSlots;
+  notes?: string;
 }
 
 export function generateHeroKey(): string {
@@ -135,6 +156,18 @@ export function createInitialCharacter(input: CreateCharacterInput = {}): Charac
   }
   if (input.portraitUrl !== undefined) {
     character.portraitUrl = input.portraitUrl;
+  }
+  if (input.tempHp !== undefined) {
+    character.tempHp = input.tempHp;
+  }
+  if (input.coins !== undefined) {
+    character.coins = input.coins;
+  }
+  if (input.spellSlots !== undefined) {
+    character.spellSlots = input.spellSlots;
+  }
+  if (input.notes !== undefined) {
+    character.notes = input.notes;
   }
 
   return character;
@@ -183,6 +216,33 @@ export function validateCharacter(char: unknown): char is Character {
   // Optional backstory & portraitUrl
   if (c.backstory !== undefined && typeof c.backstory !== 'string') return false;
   if (c.portraitUrl !== undefined && typeof c.portraitUrl !== 'string') return false;
+
+  // Optional in-game live fields
+  if (c.tempHp !== undefined && (typeof c.tempHp !== 'number' || !Number.isFinite(c.tempHp) || c.tempHp < 0)) {
+    return false;
+  }
+  if (c.coins !== undefined && c.coins !== null) {
+    if (typeof c.coins !== 'object') return false;
+    const coins = c.coins as Record<string, unknown>;
+    if (
+      typeof coins.gp !== 'number' || !Number.isFinite(coins.gp) || coins.gp < 0 ||
+      typeof coins.sp !== 'number' || !Number.isFinite(coins.sp) || coins.sp < 0 ||
+      typeof coins.cp !== 'number' || !Number.isFinite(coins.cp) || coins.cp < 0
+    ) {
+      return false;
+    }
+  }
+  if (c.spellSlots !== undefined && c.spellSlots !== null) {
+    if (typeof c.spellSlots !== 'object') return false;
+    const ss = c.spellSlots as Record<string, unknown>;
+    if (
+      typeof ss.level1Max !== 'number' || !Number.isFinite(ss.level1Max) || ss.level1Max < 0 ||
+      typeof ss.level1Used !== 'number' || !Number.isFinite(ss.level1Used) || ss.level1Used < 0
+    ) {
+      return false;
+    }
+  }
+  if (c.notes !== undefined && typeof c.notes !== 'string') return false;
 
   return true;
 }

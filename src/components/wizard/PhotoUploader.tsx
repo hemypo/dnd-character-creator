@@ -9,7 +9,8 @@ import {
   Sparkles,
   AlertCircle,
   ArrowRight,
-  Shield,
+  RefreshCw,
+  Loader2,
 } from 'lucide-react';
 import { getPresetAvatars, PresetAvatar } from '@/lib/ai/portraitPipeline';
 
@@ -25,6 +26,7 @@ export interface PhotoUploaderProps {
   onChange: (value: PhotoUploaderValue) => void;
   species?: string;
   characterClass?: string;
+  characterName?: string;
   onNext?: () => void;
   onBack?: () => void;
   onSkip?: () => void;
@@ -38,6 +40,7 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
   onChange,
   species = 'human',
   characterClass = 'fighter',
+  characterName = 'Герой',
   onNext,
   onBack,
   onSkip,
@@ -45,6 +48,7 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
 }) => {
   const [dragOver, setDragOver] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Load curated presets for the chosen species & class
@@ -67,7 +71,8 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
       const base64 = e.target?.result as string;
       onChange({
         photoBase64: base64,
-        portraitUrl: base64,
+        portraitUrl: undefined,
+        presetId: undefined,
         mode: 'photo',
       });
     };
@@ -90,14 +95,17 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
     onChange({
       presetId: preset.id,
       portraitUrl: preset.url,
+      photoBase64: undefined,
       mode: 'preset',
     });
   };
 
   const handleRemovePhoto = () => {
+    setError(null);
     onChange({
       photoBase64: undefined,
       portraitUrl: undefined,
+      presetId: undefined,
       mode: 'skip',
     });
     if (fileInputRef.current) {
@@ -106,6 +114,7 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
   };
 
   const handleGenerateWithoutPhoto = () => {
+    setError(null);
     onChange({
       photoBase64: undefined,
       presetId: undefined,
@@ -117,48 +126,170 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
     }
   };
 
+  const handleGeneratePortrait = async (withPhoto: boolean) => {
+    setError(null);
+    setIsGenerating(true);
+
+    try {
+      const payload: Record<string, unknown> = {
+        character: {
+          species,
+          characterClass,
+          name: characterName || 'Герой',
+        },
+      };
+
+      if (withPhoto && value.photoBase64) {
+        payload.photoBase64 = value.photoBase64;
+      }
+
+      payload.useFreeApi = true;
+      payload.model = 'flux';
+
+      const res = await fetch('/api/generate-portrait', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        throw new Error('Не удалось сгенерировать портрет через API');
+      }
+
+      const data = await res.json();
+      if (typeof data.portraitUrl === 'string' && data.portraitUrl) {
+        onChange({
+          ...value,
+          portraitUrl: data.portraitUrl,
+          mode: withPhoto ? 'photo' : 'ai-prompt',
+        });
+      } else {
+        throw new Error('API вернул пустой адрес портрета');
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Ошибка генерации портрета';
+      setError(msg);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   return (
     <div className="w-full space-y-6">
       <div className="text-center space-y-1">
         <span className="text-xs uppercase tracking-widest text-amber-400/90 font-medium">
-          Визуализация персонажа • D&D Visualizer
+          Визуализация персонажа • SubNP Flux Free API
         </span>
         <h2 className="text-2xl sm:text-3xl font-serif font-bold text-slate-100">
           Портрет героя
         </h2>
         <p className="text-sm text-slate-400 max-w-xl mx-auto">
-          Загрузите селфи для превращения вашего лица в фэнтези-портрет, выберите готовый аватар или создайте героя чисто по описанию.
+          Загрузите селфи и превратите его в фэнтези-портрет, сгенерируйте арт по описанию или выберите готовый аватар.
         </p>
       </div>
 
-      {/* Main Drag-Drop / Upload Area */}
+      {/* Main Upload / Generation Area */}
       <div className="p-5 rounded-xl border border-slate-800 bg-slate-900/80 space-y-4">
-        {value.photoBase64 ? (
+        {/* Loading overlay / indicator */}
+        {isGenerating && (
+          <div className="p-6 rounded-xl border border-amber-500/50 bg-slate-950 flex flex-col items-center justify-center space-y-3 text-center animate-pulse">
+            <Loader2 className="w-8 h-8 text-amber-400 animate-spin" />
+            <p className="text-sm font-medium text-amber-300">
+              Нейросеть SubNP Flux генерирует портрет...
+            </p>
+            <p className="text-xs text-slate-400">
+              Превращаем ваше фото и черты {species} {characterClass} в фэнтези-арт
+            </p>
+          </div>
+        )}
+
+        {/* State A: Generated Portrait Result Ready */}
+        {!isGenerating && value.portraitUrl && (value.mode === 'photo' || value.mode === 'ai-prompt') && (
+          <div className="flex flex-col sm:flex-row items-center gap-5 p-4 rounded-xl border border-amber-500/50 bg-slate-950">
+            <div className="relative w-36 h-36 rounded-xl overflow-hidden border-2 border-amber-400 shadow-lg shadow-amber-500/20 shrink-0 bg-slate-900">
+              <img
+                src={value.portraitUrl}
+                alt="Сгенерированный арт-портрет"
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute top-1.5 right-1.5 px-2 py-0.5 rounded-full bg-amber-400 text-slate-950 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 shadow">
+                <Sparkles className="w-3 h-3" /> Flux
+              </div>
+            </div>
+
+            <div className="flex-1 text-center sm:text-left space-y-2">
+              <div className="flex items-center justify-center sm:justify-start gap-1.5 text-xs font-semibold uppercase tracking-wider text-amber-400">
+                <Check className="w-4 h-4 text-emerald-400" />
+                <span>Портрет готов к бою!</span>
+              </div>
+              <p className="text-sm text-slate-300">
+                {value.mode === 'photo'
+                  ? 'Стилизованный портрет с сохранением ваших черт лица.'
+                  : `Фэнтези-арт, сгенерированный по лору: ${species} ${characterClass}.`}
+              </p>
+
+              <div className="pt-2 flex flex-wrap items-center justify-center sm:justify-start gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => handleGeneratePortrait(value.mode === 'photo')}
+                  className="px-3.5 py-1.5 text-xs font-medium text-slate-950 bg-amber-400 hover:bg-amber-300 rounded-lg transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  Перегенерировать
+                </button>
+                <button
+                  type="button"
+                  onClick={handleRemovePhoto}
+                  className="px-3.5 py-1.5 text-xs text-slate-300 hover:text-white border border-slate-700 hover:border-slate-600 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+                  Загрузить другое фото
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* State B: Photo uploaded, awaiting generation button click */}
+        {!isGenerating && value.photoBase64 && !value.portraitUrl && (
           <div className="flex flex-col sm:flex-row items-center gap-5 p-4 rounded-xl border border-amber-500/40 bg-slate-950">
-            <div className="relative w-32 h-32 rounded-lg overflow-hidden border-2 border-amber-400 shadow-md shadow-amber-500/20 shrink-0">
+            <div className="relative w-32 h-32 rounded-lg overflow-hidden border-2 border-slate-700 shrink-0">
               <img
                 src={value.photoBase64}
                 alt="Загруженное селфи"
                 className="w-full h-full object-cover"
               />
             </div>
-            <div className="flex-1 text-center sm:text-left space-y-1">
-              <span className="text-xs font-semibold uppercase tracking-wider text-amber-400 flex items-center justify-center sm:justify-start gap-1">
-                <Check className="w-4 h-4" /> Селфи загружено
+            <div className="flex-1 text-center sm:text-left space-y-2">
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-300 flex items-center justify-center sm:justify-start gap-1">
+                <Check className="w-4 h-4 text-amber-400" /> Селфи загружено
               </span>
-              <p className="text-sm text-slate-300">
-                Нейросеть сохранит черты вашего лица и перенесет их на вашего {species} {characterClass}.
+              <p className="text-xs sm:text-sm text-slate-400">
+                Нажмите кнопку ниже, чтобы нейросеть Flux превратила фото в портрет персонажа:
               </p>
-              <button
-                type="button"
-                onClick={handleRemovePhoto}
-                className="mt-2 text-xs text-rose-400 hover:text-rose-300 flex items-center gap-1 mx-auto sm:mx-0 transition-colors cursor-pointer"
-              >
-                <Trash2 className="w-3.5 h-3.5" /> Удалить фото
-              </button>
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => handleGeneratePortrait(true)}
+                  className="px-4 py-2 text-xs sm:text-sm font-semibold text-slate-950 bg-amber-400 hover:bg-amber-300 rounded-lg shadow-md shadow-amber-500/20 transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Sparkles className="w-4 h-4 text-slate-950" />
+                  Превратить селфи в портрет D&D
+                </button>
+                <button
+                  type="button"
+                  onClick={handleRemovePhoto}
+                  className="px-3 py-1.5 text-xs text-rose-400 hover:text-rose-300 flex items-center gap-1 transition-colors cursor-pointer"
+                >
+                  <Trash2 className="w-3.5 h-3.5" /> Удалить фото
+                </button>
+              </div>
             </div>
           </div>
-        ) : (
+        )}
+
+        {/* State C: No photo uploaded yet */}
+        {!isGenerating && !value.photoBase64 && !value.portraitUrl && (
           <div
             onDragOver={(e) => {
               e.preventDefault();
@@ -192,12 +323,13 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
                 Перетащите ваше фото сюда или <span className="text-amber-400 underline">выберите файл</span>
               </p>
               <p className="text-xs text-slate-500">
-                JPEG, PNG, WebP до 5 МБ. Портрет будет стилизован под D&D 2024.
+                JPEG, PNG, WebP до 5 МБ. Портрет будет стилизован под D&D 2024 через SubNP Flux.
               </p>
             </div>
           </div>
         )}
 
+        {/* Generation error display */}
         {error && (
           <div className="flex items-center gap-2 p-3 rounded-lg border border-rose-500/40 bg-rose-950/30 text-rose-300 text-xs">
             <AlertCircle className="w-4 h-4 shrink-0" />
@@ -263,26 +395,37 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
         <button
           type="button"
           onClick={onBack}
-          disabled={isSubmitting}
+          disabled={isSubmitting || isGenerating}
           className="w-full sm:w-auto px-4 py-2 text-sm text-slate-300 hover:text-white border border-slate-700 hover:border-slate-600 rounded-lg transition-colors cursor-pointer"
         >
           Назад
         </button>
 
-        <div className="w-full sm:w-auto flex flex-col sm:flex-row items-center gap-3">
+        <div className="w-full sm:w-auto flex flex-wrap items-center justify-end gap-2.5">
+          <button
+            type="button"
+            onClick={() => handleGeneratePortrait(false)}
+            disabled={isSubmitting || isGenerating}
+            className="px-3.5 py-2 text-sm text-slate-400 hover:text-amber-300 border border-slate-800 hover:border-slate-700 rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+            title="Сгенерировать и просмотреть арт перед завершением"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+            <span>✨ Сгенерировать арт по лору</span>
+          </button>
+
           <button
             type="button"
             onClick={handleGenerateWithoutPhoto}
-            disabled={isSubmitting}
-            className="w-full sm:w-auto px-4 py-2 text-sm text-slate-400 hover:text-amber-300 border border-slate-800 hover:border-slate-700 rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+            disabled={isSubmitting || isGenerating}
+            className="px-3.5 py-2 text-sm text-slate-400 hover:text-slate-200 border border-slate-800 hover:border-slate-700 rounded-lg transition-colors cursor-pointer"
           >
-            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
             Сгенерировать без фото
           </button>
+
           <button
             type="button"
             onClick={onNext}
-            disabled={isSubmitting}
+            disabled={isSubmitting || isGenerating}
             className="w-full sm:w-auto px-6 py-2.5 text-sm font-semibold text-slate-950 bg-amber-400 hover:bg-amber-300 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg shadow-md shadow-amber-500/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
           >
             <span>Создать персонажа</span>

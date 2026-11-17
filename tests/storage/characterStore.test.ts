@@ -6,12 +6,13 @@ import {
   generateUniqueCharacterKey,
   saveCharacterRecord,
   getCharacterRecord,
+  updateCharacterRecord,
   listRecentCharacters,
   resetCharacterStore,
 } from '@/lib/storage/characterStore';
 import { buildBaseChassis } from '@/lib/dnd2024/rulesEngine';
 import { POST as postCharacter, GET as getCharactersList } from '@/app/api/characters/route';
-import { GET as getCharacterByKey } from '@/app/api/characters/[key]/route';
+import { GET as getCharacterByKey, PATCH as patchCharacterByKey } from '@/app/api/characters/[key]/route';
 
 describe('Key-Based Character Store & Persistence', () => {
   beforeEach(async () => {
@@ -303,6 +304,52 @@ describe('Key-Based Character Store & Persistence', () => {
 
       const data = await res.json();
       expect(data.error).toBeDefined();
+    });
+
+    it('PATCH returns 200 and updates live in-game stats', async () => {
+      const char = buildBaseChassis({
+        roleId: 'striker',
+        powerSourceId: 'shadow',
+        speciesId: 'elf',
+        characterName: 'Леголас',
+      });
+      const { key } = await saveCharacterRecord(char);
+
+      const patchReq = new Request(`http://localhost:3000/api/characters/${key}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tempHp: 5,
+          coins: { gp: 25, sp: 10, cp: 50 },
+          spellSlots: { level1Max: 2, level1Used: 1 },
+          notes: 'Найден ключ от башни гоблинов',
+        }),
+      });
+
+      const res = await patchCharacterByKey(patchReq, { params: { key } });
+      expect(res.status).toBe(200);
+
+      const data = await res.json();
+      expect(data.success).toBe(true);
+      expect(data.character.tempHp).toBe(5);
+      expect(data.character.coins).toEqual({ gp: 25, sp: 10, cp: 50 });
+      expect(data.character.spellSlots).toEqual({ level1Max: 2, level1Used: 1 });
+      expect(data.character.notes).toBe('Найден ключ от башни гоблинов');
+
+      // Verify persistent storage retrieval
+      const reloaded = await getCharacterRecord(key);
+      expect(reloaded?.tempHp).toBe(5);
+      expect(reloaded?.notes).toBe('Найден ключ от башни гоблинов');
+    });
+
+    it('PATCH returns 404 when character key is not found', async () => {
+      const patchReq = new Request('http://localhost:3000/api/characters/HERO-9999', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tempHp: 3 }),
+      });
+      const res = await patchCharacterByKey(patchReq, { params: { key: 'HERO-9999' } });
+      expect(res.status).toBe(404);
     });
   });
 });

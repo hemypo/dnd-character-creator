@@ -173,6 +173,39 @@ export async function getCharacterRecord(key: string): Promise<Character | null>
 }
 
 /**
+ * Updates an existing character record with partial updates and persists the result.
+ */
+export async function updateCharacterRecord(
+  key: string,
+  updates: Partial<Character>
+): Promise<Character | null> {
+  if (!key || typeof key !== 'string') {
+    return null;
+  }
+
+  const store = ensureStorageLoaded();
+  const normalizedKey = key.trim().toUpperCase();
+
+  const existing = store[normalizedKey];
+  if (!existing) {
+    return null;
+  }
+
+  const updatedChar: Character = {
+    ...existing,
+    ...updates,
+    id: existing.id,
+    key: existing.key,
+    createdAt: existing.createdAt,
+  };
+
+  store[normalizedKey] = updatedChar;
+  persistStorage();
+
+  return JSON.parse(JSON.stringify(updatedChar)) as Character;
+}
+
+/**
  * Lists the most recently created characters as summaries.
  */
 export async function listRecentCharacters(limit: number = 20): Promise<CharacterSummary[]> {
