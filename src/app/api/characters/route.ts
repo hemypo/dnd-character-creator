@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import {
   saveCharacterRecord,
   listRecentCharacters,
-  generateCharacterKey,
+  generateUniqueCharacterKey,
 } from '@/lib/storage/characterStore';
 import { validateCharacter, Character } from '@/types/character';
 
@@ -26,7 +26,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Character data must be provided as an object' }, { status: 400 });
     }
 
-    // Ensure candidate has valid id and key shape if not already provided
+    // Ensure candidate has valid id and unique key shape if not already provided
     const candidate: Record<string, unknown> = {
       ...rawCharacter,
       id:
@@ -36,7 +36,7 @@ export async function POST(request: Request) {
       key:
         typeof rawCharacter.key === 'string' && /^HERO-[A-Za-z0-9_-]+$/i.test(rawCharacter.key)
           ? rawCharacter.key
-          : generateCharacterKey(),
+          : generateUniqueCharacterKey(),
     };
 
     if (!validateCharacter(candidate)) {

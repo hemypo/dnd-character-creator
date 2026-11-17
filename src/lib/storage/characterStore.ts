@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { Character, validateCharacter } from '@/types/character';
+import { Character } from '@/types/character';
 
 export interface CharacterSummary {
   id: string;
@@ -77,25 +77,51 @@ function ensureStorageLoaded(): Record<string, Character> {
 }
 
 /**
+ * Generates a unique character key that does not collide with existing records in the store.
+ */
+export function generateUniqueCharacterKey(): string {
+  const store = ensureStorageLoaded();
+  let key: string;
+  do {
+    key = generateCharacterKey();
+  } while (store[key]);
+  return key;
+}
+
+/**
  * Persists the in-memory cache to the filesystem synchronously and atomically.
+ * Prevents Windows EPERM issues and guarantees no orphan .tmp files leak.
  */
 function persistStorage(): void {
-  try {
-    if (!fs.existsSync(STORAGE_DIR)) {
-      fs.mkdirSync(STORAGE_DIR, { recursive: true });
-    }
+  if (!fs.existsSync(STORAGE_DIR)) {
+    fs.mkdirSync(STORAGE_DIR, { recursive: true });
+  }
 
-    const dataToSave = memoryCache || {};
-    const tempFile = `${STORAGE_FILE}.tmp.${Date.now()}`;
+  const dataToSave = memoryCache || {};
+  const tempFile = `${STORAGE_FILE}.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2)}.tmp`;
+
+  try {
     fs.writeFileSync(tempFile, JSON.stringify(dataToSave, null, 2), 'utf-8');
-    fs.renameSync(tempFile, STORAGE_FILE);
-  } catch (error) {
-    console.error('Failed to persist character storage:', error);
-    // Fallback: direct write if rename fails
     try {
-      fs.writeFileSync(STORAGE_FILE, JSON.stringify(memoryCache || {}, null, 2), 'utf-8');
+      fs.renameSync(tempFile, STORAGE_FILE);
+    } catch {
+      // On Windows or locked file scenarios, renameSync can throw EPERM/EBUSY; fallback to copyFileSync
+      fs.copyFileSync(tempFile, STORAGE_FILE);
+    }
+  } catch (error) {
+    console.error('Failed to persist character storage atomically:', error);
+    try {
+      fs.writeFileSync(STORAGE_FILE, JSON.stringify(dataToSave, null, 2), 'utf-8');
     } catch (innerError) {
       console.error('Critical: unable to write character storage file:', innerError);
+    }
+  } finally {
+    if (fs.existsSync(tempFile)) {
+      try {
+        fs.unlinkSync(tempFile);
+      } catch {
+        // Ignore temp file cleanup failure
+      }
     }
   }
 }
@@ -110,9 +136,7 @@ export async function saveCharacterRecord(character: Character): Promise<{ key: 
 
   // If no key or invalid key format, generate a new unique key
   if (!assignedKey || !/^HERO-[A-Z0-9_-]+$/i.test(assignedKey)) {
-    do {
-      assignedKey = generateCharacterKey();
-    } while (store[assignedKey]);
+    assignedKey = generateUniqueCharacterKey();
   }
 
   const completeCharacter: Character = {
@@ -188,6 +212,18 @@ export async function resetCharacterStore(): Promise<void> {
       fs.mkdirSync(STORAGE_DIR, { recursive: true });
     }
     fs.writeFileSync(STORAGE_FILE, JSON.stringify({}, null, 2), 'utf-8');
+
+    // Clean up any stray tmp files in data directory
+    const files = fs.readdirSync(STORAGE_DIR);
+    for (const file of files) {
+      if (file.includes('.tmp')) {
+        try {
+          fs.unlinkSync(path.join(STORAGE_DIR, file));
+        } catch {
+          // ignore cleanup failure
+        }
+      }
+    }
   } catch (error) {
     console.error('Failed to reset character store file:', error);
   }

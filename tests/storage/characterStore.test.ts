@@ -1,6 +1,9 @@
+import fs from 'fs';
+import path from 'path';
 import { describe, it, expect, beforeEach } from 'vitest';
 import {
   generateCharacterKey,
+  generateUniqueCharacterKey,
   saveCharacterRecord,
   getCharacterRecord,
   listRecentCharacters,
@@ -15,7 +18,7 @@ describe('Key-Based Character Store & Persistence', () => {
     await resetCharacterStore();
   });
 
-  describe('generateCharacterKey', () => {
+  describe('generateCharacterKey and generateUniqueCharacterKey', () => {
     it('generates a clean human-readable key matching /^HERO-[A-Z0-9]{4}$/', () => {
       const key = generateCharacterKey();
       expect(key).toMatch(/^HERO-[A-Z0-9]{4}$/);
@@ -27,6 +30,20 @@ describe('Key-Based Character Store & Persistence', () => {
         keys.add(generateCharacterKey());
       }
       expect(keys.size).toBe(50);
+    });
+
+    it('generateUniqueCharacterKey guarantees a key not currently in store', async () => {
+      const char = buildBaseChassis({
+        roleId: 'tank',
+        powerSourceId: 'martial',
+        speciesId: 'human',
+        characterName: 'Первый',
+      });
+      const { key } = await saveCharacterRecord(char);
+
+      const newKey = generateUniqueCharacterKey();
+      expect(newKey).toMatch(/^HERO-[A-Z0-9]{4}$/);
+      expect(newKey).not.toBe(key);
     });
   });
 
@@ -86,6 +103,36 @@ describe('Key-Based Character Store & Persistence', () => {
 
       const loaded = await getCharacterRecord('hero-spec');
       expect(loaded?.name).toBe('Брунор');
+    });
+
+    it('saves 10 characters concurrently with Promise.all and leaves no orphan .tmp files', async () => {
+      const characters = Array.from({ length: 10 }, (_, i) =>
+        buildBaseChassis({
+          roleId: 'tank',
+          powerSourceId: 'martial',
+          speciesId: 'human',
+          characterName: `Конкурентный герой ${i + 1}`,
+        })
+      );
+
+      const results = await Promise.all(characters.map((char) => saveCharacterRecord(char)));
+      expect(results).toHaveLength(10);
+
+      const uniqueKeys = new Set(results.map((r) => r.key));
+      expect(uniqueKeys.size).toBe(10);
+
+      for (const { key } of results) {
+        const retrieved = await getCharacterRecord(key);
+        expect(retrieved).not.toBeNull();
+        expect(retrieved?.key).toBe(key);
+      }
+
+      const dataDir = path.join(process.cwd(), 'data');
+      if (fs.existsSync(dataDir)) {
+        const files = fs.readdirSync(dataDir);
+        const tmpFiles = files.filter((f) => f.includes('.tmp'));
+        expect(tmpFiles).toHaveLength(0);
+      }
     });
   });
 
