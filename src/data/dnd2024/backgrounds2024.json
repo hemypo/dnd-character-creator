@@ -1,0 +1,162 @@
+[
+  {
+    "id": "acolyte",
+    "name": "Прислужник",
+    "nameEn": "Acolyte",
+    "abilityScores": ["intelligence", "wisdom", "charisma"],
+    "originFeat": "Magic Initiate (Cleric)",
+    "skills": ["Религия (Religion)", "Проницательность (Insight)"],
+    "tool": "Каллиграфические принадлежности",
+    "equipment": ["Священный символ", "Книга молитв", "Одежды послушника", "50 золотых монет"]
+  },
+  {
+    "id": "artisan",
+    "name": "Ремесленник",
+    "nameEn": "Artisan",
+    "abilityScores": ["strength", "dexterity", "intelligence"],
+    "originFeat": "Crafter",
+    "skills": ["Анализ (Investigation)", "Убеждение (Persuasion)"],
+    "tool": "Один ремесленный инструмент",
+    "equipment": ["Набор ремесленника", "Поясной кошель", "Письмо гильдии", "50 золотых монет"]
+  },
+  {
+    "id": "charlatan",
+    "name": "Шарлатан",
+    "nameEn": "Charlatan",
+    "abilityScores": ["dexterity", "constitution", "charisma"],
+    "originFeat": "Skilled",
+    "skills": ["Обман (Deception)", "Ловкость рук (Sleight of Hand)"],
+    "tool": "Набор для фальсификации",
+    "equipment": ["Комплект отличной одежды", "Набор для грима", "Меченые кости", "50 золотых монет"]
+  },
+  {
+    "id": "criminal",
+    "name": "Преступник",
+    "nameEn": "Criminal",
+    "abilityScores": ["dexterity", "constitution", "intelligence"],
+    "originFeat": "Alert",
+    "skills": ["Скрытность (Stealth)", "Ловкость рук (Sleight of Hand)"],
+    "tool": "Воровские инструменты (Thieves' Tools)",
+    "equipment": ["2 кинжала", "Темная одежда с капюшоном", "Лом", "50 золотых монет"]
+  },
+  {
+    "id": "entertainer",
+    "name": "Артист",
+    "nameEn": "Entertainer",
+    "abilityScores": ["strength", "dexterity", "charisma"],
+    "originFeat": "Musician",
+    "skills": ["Акробатика (Acrobatics)", "Выступление (Performance)"],
+    "tool": "Один музыкальный инструмент",
+    "equipment": ["Музыкальный инструмент", "Костюм для выступлений", "Зеркало", "50 золотых монет"]
+  },
+  {
+    "id": "farmer",
+    "name": "Фермер",
+    "nameEn": "Farmer",
+    "abilityScores": ["strength", "constitution", "wisdom"],
+    "originFeat": "Tough",
+    "skills": ["Уход за животными (Animal Handling)", "Природа (Nature)"],
+    "tool": "Инструменты плотника",
+    "equipment": ["Вилы или серп", "Теплая рабочая одежда", "Мешок зерна", "50 золотых монет"]
+  },
+  {
+    "id": "guard",
+    "name": "Стражник",
+    "nameEn": "Guard",
+    "abilityScores": ["strength", "intelligence", "wisdom"],
+    "originFeat": "Alert",
+    "skills": ["Атлетика (Athletics)", "Внимательность (Perception)"],
+    "tool": "Игровой набор (игральные кости)",
+    "equipment": ["Копье", "Рог тревоги", "Качественный плащ стражи", "50 золотых монет"]
+  },
+  {
+    "id": "guide",
+    "name": "Проводник",
+    "nameEn": "Guide",
+    "abilityScores": ["dexterity", "constitution", "wisdom"],
+    "originFeat": "Magic Initiate (Druid)",
+    "skills": ["Выживание (Survival)", "Скрытность (Stealth)"],
+    "tool": "Инструменты картографа",
+    "equipment": ["Короткий лук с 20 стрелами", "Карта региона", "Походная палатка", "50 золотых монет"]
+  },
+  {
+    "id": "hermit",
+    "name": "Отшельник",
+    "nameEn": "Hermit",
+    "abilityScores": ["constitution", "wisdom", "charisma"],
+    "originFeat": "Healer",
+    "skills": ["Медицина (Medicine)", "Религия (Religion)"],
+    "tool": "Набор травника",
+    "equipment": ["Набор травника", "Тетрадь с наблюдениями", "Зимнее одеяло", "50 золотых монет"]
+  },
+  {
+    "id": "merchant",
+    "name": "Купец",
+    "nameEn": "Merchant",
+    "abilityScores": ["constitution", "intelligence", "charisma"],
+    "originFeat": "Lucky",
+    "skills": ["Убеждение (Persuasion)", "Уход за животными (Animal Handling)"],
+    "tool": "Инструменты навигатора",
+    "equipment": ["Купеческий фургончик или мул", "Бухгалтерская книга", "Весы", "50 золотых монет"]
+  },
+  {
+    "id": "noble",
+    "name": "Дворянин",
+    "nameEn": "Noble",
+    "abilityScores": ["strength", "intelligence", "charisma"],
+    "originFeat": "Skilled",
+    "skills": ["История (History)", "Убеждение (Persuasion)"],
+    "tool": "Игровой набор (шахматы)",
+    "equipment": ["Фамильная печатка", "Грамота о происхождении", "Шелковые одежды", "50 золотых монет"]
+  },
+  {
+    "id": "sage",
+    "name": "Мудрец",
+    "nameEn": "Sage",
+    "abilityScores": ["constitution", "intelligence", "wisdom"],
+    "originFeat": "Magic Initiate (Wizard)",
+    "skills": ["Магия (Arcana)", "История (History)"],
+    "tool": "Каллиграфические принадлежности",
+    "equipment": ["Бутылочка чернил", "Перо", "Книга исследований", "50 золотых монет"]
+  },
+  {
+    "id": "sailor",
+    "name": "Моряк",
+    "nameEn": "Sailor",
+    "abilityScores": ["strength", "dexterity", "wisdom"],
+    "originFeat": "Tavern Brawler",
+    "skills": ["Атлетика (Athletics)", "Внимательность (Perception)"],
+    "tool": "Инструменты навигатора",
+    "equipment": ["Абордажный скимитар", "50 футов шелкового каната", "Талисман на удачу", "50 золотых монет"]
+  },
+  {
+    "id": "scribe",
+    "name": "Писец",
+    "nameEn": "Scribe",
+    "abilityScores": ["dexterity", "intelligence", "wisdom"],
+    "originFeat": "Skilled",
+    "skills": ["Анализ (Investigation)", "История (History)"],
+    "tool": "Каллиграфические принадлежности",
+    "equipment": ["Футляр для свитков", "Книга летописей", "Песочные часы", "50 золотых монет"]
+  },
+  {
+    "id": "soldier",
+    "name": "Солдат",
+    "nameEn": "Soldier",
+    "abilityScores": ["strength", "dexterity", "constitution"],
+    "originFeat": "Savage Attacker",
+    "skills": ["Атлетика (Athletics)", "Запугивание (Intimidation)"],
+    "tool": "Игровой набор (кости или карты)",
+    "equipment": ["Короткий меч", "Армейский жетон", "Колода карт", "50 золотых монет"]
+  },
+  {
+    "id": "wayfarer",
+    "name": "Странник",
+    "nameEn": "Wayfarer",
+    "abilityScores": ["dexterity", "wisdom", "charisma"],
+    "originFeat": "Lucky",
+    "skills": ["Проницательность (Insight)", "Скрытность (Stealth)"],
+    "tool": "Воровские инструменты",
+    "equipment": ["2 кинжала", "Удобные сапоги", "Дорожный плащ", "50 золотых монет"]
+  }
+]
