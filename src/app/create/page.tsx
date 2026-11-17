@@ -6,14 +6,7 @@ import { WizardContainer } from '@/components/wizard/WizardContainer';
 import { Character } from '@/types/character';
 
 export default function CreateCharacterPage() {
-  let router: ReturnType<typeof useRouter> | null = null;
-  try {
-    // In some test runners or SSR mocks, useRouter may throw outside App Router
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    router = useRouter();
-  } catch {
-    router = null;
-  }
+  const router = useRouter();
 
   const handleComplete = (character: Character) => {
     try {
@@ -21,11 +14,9 @@ export default function CreateCharacterPage() {
         localStorage.setItem(`hero_${character.key}`, JSON.stringify(character));
         localStorage.setItem('latest_hero_key', character.key);
       }
-      if (router && typeof router.push === 'function') {
-        router.push(`/character/${character.key}`);
-      }
+      router.push(`/character/${character.key}`);
     } catch {
-      // Fallback if router is not mounted
+      // Fallback
     }
   };
 

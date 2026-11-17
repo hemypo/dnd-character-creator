@@ -19,7 +19,6 @@ import { Character, generateHeroKey } from '@/types/character';
 import { buildBaseChassis } from '@/lib/dnd2024/rulesEngine';
 import { generateBackstory } from '@/lib/ai/backstoryGenerator';
 import { generatePortrait, generateMockSvgPortrait } from '@/lib/ai/portraitPipeline';
-import { saveCharacterRecord } from '@/lib/storage/characterStore';
 
 export interface WizardContainerProps {
   onComplete?: (character: Character) => void;
@@ -88,8 +87,7 @@ export const WizardContainer: React.FC<WizardContainerProps> = ({
       let narrativeBackstory = '';
 
       const isTestEnv = typeof process !== 'undefined' && Boolean(process.env.VITEST);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const isFetchMocked = typeof window !== 'undefined' && typeof fetch === 'function' && Boolean((fetch as any).mock);
+      const isFetchMocked = typeof window !== 'undefined' && typeof fetch === 'function' && 'mock' in fetch;
 
       if (!isTestEnv || isFetchMocked) {
         try {
@@ -160,7 +158,7 @@ export const WizardContainer: React.FC<WizardContainerProps> = ({
       }
       chassis.portraitUrl = portraitUrl;
 
-      // 4. Persist Character
+      // 4. Persist Character via API route and localStorage
       setAssemblyProgress('Сохранение персонажа в летописи...');
       if (!isTestEnv || isFetchMocked) {
         try {
@@ -172,14 +170,16 @@ export const WizardContainer: React.FC<WizardContainerProps> = ({
             });
           }
         } catch {
-          // fallback
+          // network or offline fallback
         }
       }
-      // Also write through local store fallback
       try {
-        await saveCharacterRecord(chassis);
+        if (typeof window !== 'undefined' && window.localStorage) {
+          localStorage.setItem(`hero_${chassis.key}`, JSON.stringify(chassis));
+          localStorage.setItem('latest_hero_key', chassis.key);
+        }
       } catch {
-        // already saved or test environment
+        // quota or security error
       }
 
       setAssembledCharacter(chassis);
@@ -346,7 +346,6 @@ export const WizardContainer: React.FC<WizardContainerProps> = ({
                 <div className="max-w-md mx-auto p-4 rounded-xl border border-slate-800 bg-slate-950 text-left flex items-center gap-4">
                   {assembledCharacter.portraitUrl && (
                     <div className="w-16 h-16 rounded-lg overflow-hidden border border-slate-700 shrink-0">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={assembledCharacter.portraitUrl}
                         alt={assembledCharacter.name}

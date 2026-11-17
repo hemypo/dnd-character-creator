@@ -49,8 +49,7 @@ export const CustomMechanicInput: React.FC<CustomMechanicInputProps> = ({
       let generatedCards: BalanceCard[] = [];
 
       const isTestEnv = typeof process !== 'undefined' && Boolean(process.env.VITEST);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const isFetchMocked = typeof window !== 'undefined' && typeof fetch === 'function' && Boolean((fetch as any).mock);
+      const isFetchMocked = typeof window !== 'undefined' && typeof fetch === 'function' && 'mock' in fetch;
 
       // Try API route first if in browser or if fetch is mocked
       if (!isTestEnv || isFetchMocked) {

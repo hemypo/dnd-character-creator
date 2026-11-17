@@ -136,7 +136,6 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
         {value.photoBase64 ? (
           <div className="flex flex-col sm:flex-row items-center gap-5 p-4 rounded-xl border border-amber-500/40 bg-slate-950">
             <div className="relative w-32 h-32 rounded-lg overflow-hidden border-2 border-amber-400 shadow-md shadow-amber-500/20 shrink-0">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={value.photoBase64}
                 alt="Загруженное селфи"
@@ -234,7 +233,6 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
                 }`}
               >
                 <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-lg overflow-hidden border border-slate-700 bg-slate-950 shrink-0">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={preset.url}
                     alt={preset.name}

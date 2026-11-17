@@ -2,7 +2,15 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import React from 'react';
 import { WizardContainer } from '@/components/wizard/WizardContainer';
+import CreateCharacterPage from '@/app/create/page';
 import { Character } from '@/types/character';
+
+const mockPush = vi.fn();
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: mockPush,
+  }),
+}));
 
 describe('WizardContainer Component', () => {
   beforeEach(() => {
@@ -177,5 +185,34 @@ describe('WizardContainer Component', () => {
     expect(createdChar.characterClass).toBe('fighter');
     expect(createdChar.hp).toBeGreaterThan(0);
     expect(createdChar.ac).toBeGreaterThan(0);
+  });
+
+  it('renders CreateCharacterPage and routes on completion', async () => {
+    render(<CreateCharacterPage />);
+
+    expect(screen.getByText(/Сотворение персонажа/i)).toBeDefined();
+    expect(screen.getByText(/Стальной щит/i)).toBeDefined();
+
+    // Select role
+    fireEvent.click(screen.getByText(/Стальной щит/i));
+    await waitFor(() => screen.getByText(/Воинское мастерство/i));
+    fireEvent.click(screen.getByText(/Воинское мастерство/i));
+    await waitFor(() => screen.getByText(/Человек/i));
+    fireEvent.click(screen.getByText(/Человек/i));
+    fireEvent.click(screen.getByRole('button', { name: /Далее|Продолжить/i }));
+
+    // Skip mechanic
+    await waitFor(() => screen.getByText(/Особая механика|Уникальная черта/i));
+    fireEvent.click(screen.getByRole('button', { name: /Пропустить/i }));
+
+    // Skip photo
+    await waitFor(() => screen.getByText(/Портрет героя/i));
+    const skipBtn = screen.getByRole('button', { name: /Сгенерировать без фото/i });
+    fireEvent.click(skipBtn);
+
+    // Should navigate via router.push
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith(expect.stringMatching(/^\/character\/HERO-/));
+    }, { timeout: 5000 });
   });
 });
