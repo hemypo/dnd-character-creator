@@ -5,7 +5,17 @@ build/
 dist/
 *.log
 .DS_Store
-.superpowers/sdd/*/task-*.diff
 
+# Local Environment
+.env.local
+.env.*.local
+
+# Local Data and Temporary Files
+data/*.json
 data/*.tmp*
+!data/.gitkeep
 
+# Build and Tooling Cache
+tsconfig.tsbuildinfo
+.engram/
+.superpowers/sdd/*/task-*.diff
