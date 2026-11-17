@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Shield,
   Sword,
@@ -24,6 +24,7 @@ import {
   ARCHETYPE_POWER_SOURCES,
   ARCHETYPE_SPECIES,
 } from '@/lib/dnd2024/archetypes';
+import { PersonalityQuiz } from './PersonalityQuiz';
 
 export interface ArchetypeSelectorProps {
   selection: ArchetypeSelection;
@@ -32,6 +33,7 @@ export interface ArchetypeSelectorProps {
   onSubStepChange?: (subStep: 'role' | 'power' | 'species' | 'name') => void;
   onNext?: () => void;
   onBack?: () => void;
+  initialMode?: 'quiz' | 'manual';
 }
 
 // Icon mapping dictionary
@@ -80,7 +82,10 @@ export const ArchetypeSelector: React.FC<ArchetypeSelectorProps> = ({
   onSubStepChange,
   onNext,
   onBack,
+  initialMode = 'quiz',
 }) => {
+  const [mode, setMode] = useState<'quiz' | 'manual'>(initialMode);
+
   const handleSelectRole = (roleId: string) => {
     onChange({ ...selection, roleId });
     if (onSubStepChange) {
@@ -106,7 +111,50 @@ export const ArchetypeSelector: React.FC<ArchetypeSelectorProps> = ({
 
   return (
     <div className="w-full space-y-6">
-      {/* SubStep 1: Role Selection */}
+      {/* Creation Mode Switcher */}
+      <div className="flex justify-center">
+        <div className="inline-flex p-1 bg-slate-900 border border-slate-800 rounded-xl shadow-inner">
+          <button
+            type="button"
+            data-testid="mode-quiz-btn"
+            onClick={() => setMode('quiz')}
+            className={`flex items-center gap-2 px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
+              mode === 'quiz'
+                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Sparkles className="w-4 h-4 text-amber-400" />
+            <span>Сюжетный тест (10 вопросов)</span>
+          </button>
+          <button
+            type="button"
+            data-testid="mode-manual-btn"
+            onClick={() => setMode('manual')}
+            className={`flex items-center gap-2 px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
+              mode === 'manual'
+                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Zap className="w-4 h-4 text-amber-400" />
+            <span>Выбор вручную</span>
+          </button>
+        </div>
+      </div>
+
+      {mode === 'quiz' ? (
+        <PersonalityQuiz
+          initialSelection={selection}
+          onComplete={(quizSel) => {
+            onChange({ ...selection, ...quizSel });
+            if (onNext) onNext();
+          }}
+          onSwitchToManual={() => setMode('manual')}
+        />
+      ) : (
+        <>
+          {/* SubStep 1: Role Selection */}
       {subStep === 'role' && (
         <section aria-label="Выбор роли" className="space-y-4">
           <div className="text-center space-y-1">
@@ -357,6 +405,8 @@ export const ArchetypeSelector: React.FC<ArchetypeSelectorProps> = ({
             </button>
           </div>
         </section>
+      )}
+        </>
       )}
     </div>
   );

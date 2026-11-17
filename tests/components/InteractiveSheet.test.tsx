@@ -26,6 +26,7 @@ const mockCharacter: Character = {
   ac: 16,
   speed: 30,
   originFeat: 'Savage Attacker',
+  alignment: 'Законно-добрый',
   customMechanic: {
     id: 'mech-1',
     title: 'Дыхание кузни',
@@ -52,6 +53,8 @@ describe('InteractiveSheet Component', () => {
     expect(screen.getByText(/Воин|Fighter/i)).toBeDefined();
     expect(screen.getByText(/Дварф|Dwarf/i)).toBeDefined();
     expect(screen.getByText(/Солдат|Soldier/i)).toBeDefined();
+    expect(screen.getByTestId('character-alignment-badge')).toBeDefined();
+    expect(screen.getByText(/Законно-добрый/i)).toBeDefined();
   });
 
   it('displays combat badges: AC, HP, Speed, Initiative, and Proficiency bonus', () => {

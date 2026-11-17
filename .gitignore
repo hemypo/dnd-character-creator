@@ -18,4 +18,4 @@ data/*.tmp*
 # Build and Tooling Cache
 tsconfig.tsbuildinfo
 .engram/
-.superpowers/sdd/*/task-*.diff
+.superpowers/

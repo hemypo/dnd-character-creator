@@ -80,6 +80,7 @@ export interface Character {
   ac: number;
   speed: number;
   originFeat: string;
+  alignment?: string;
   customMechanic?: BalanceCard;
   backstory?: string;
   portraitUrl?: string;
@@ -104,6 +105,7 @@ export interface CreateCharacterInput {
   ac?: number;
   speed?: number;
   originFeat?: string;
+  alignment?: string;
   customMechanic?: BalanceCard;
   backstory?: string;
   portraitUrl?: string;
@@ -148,6 +150,9 @@ export function createInitialCharacter(input: CreateCharacterInput = {}): Charac
     createdAt: input.createdAt ?? new Date().toISOString(),
   };
 
+  if (input.alignment !== undefined) {
+    character.alignment = input.alignment;
+  }
   if (input.customMechanic !== undefined) {
     character.customMechanic = input.customMechanic;
   }
@@ -213,9 +218,10 @@ export function validateCharacter(char: unknown): char is Character {
     }
   }
 
-  // Optional backstory & portraitUrl
+  // Optional backstory & portraitUrl & alignment
   if (c.backstory !== undefined && typeof c.backstory !== 'string') return false;
   if (c.portraitUrl !== undefined && typeof c.portraitUrl !== 'string') return false;
+  if (c.alignment !== undefined && typeof c.alignment !== 'string') return false;
 
   // Optional in-game live fields
   if (c.tempHp !== undefined && (typeof c.tempHp !== 'number' || !Number.isFinite(c.tempHp) || c.tempHp < 0)) {

@@ -260,7 +260,9 @@ export async function generateCharacterPdf(character: Character): Promise<Uint8A
     color: cDarkText,
   });
 
-  page.drawText(`${bgLabel}  |  ${keyLabel}`, {
+  const alignmentStr = character.alignment ? `  |  ${character.alignment.toUpperCase()}` : '';
+
+  page.drawText(`${bgLabel}${alignmentStr}  |  ${keyLabel}`, {
     x: contentLeft + 14,
     y: headerY + headerHeight - 71,
     size: 9.5,

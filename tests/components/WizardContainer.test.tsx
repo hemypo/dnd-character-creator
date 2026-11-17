@@ -19,7 +19,7 @@ describe('WizardContainer Component', () => {
   });
 
   it('renders step 1 archetype role cards and advances to power source', async () => {
-    render(<WizardContainer onComplete={() => {}} />);
+    render(<WizardContainer initialMode="manual" onComplete={() => {}} />);
 
     // Step 1: Role selection
     expect(screen.getByText(/Какова ваша роль/i)).toBeDefined();
@@ -37,7 +37,7 @@ describe('WizardContainer Component', () => {
   });
 
   it('advances through role, power source, species, and name updates selection state', async () => {
-    render(<WizardContainer onComplete={() => {}} />);
+    render(<WizardContainer initialMode="manual" onComplete={() => {}} />);
 
     // 1. Select Tank
     const roleCard = screen.getByText(/Стальной щит/i);
@@ -72,7 +72,7 @@ describe('WizardContainer Component', () => {
   });
 
   it('custom mechanic step accepts text and displays selectable Balance Cards', async () => {
-    render(<WizardContainer onComplete={() => {}} />);
+    render(<WizardContainer initialMode="manual" onComplete={() => {}} />);
 
     // Navigate to Custom Mechanic step
     fireEvent.click(screen.getByText(/Стальной щит/i));
@@ -113,7 +113,7 @@ describe('WizardContainer Component', () => {
   });
 
   it('photo uploader step supports photo drop, skip/generate without photo, and preset picking', async () => {
-    render(<WizardContainer onComplete={() => {}} />);
+    render(<WizardContainer initialMode="manual" onComplete={() => {}} />);
 
     // Fast-forward to photo step
     fireEvent.click(screen.getByText(/Стальной щит/i));
@@ -147,7 +147,7 @@ describe('WizardContainer Component', () => {
 
   it('completes wizard, produces a valid Character and invokes onComplete', async () => {
     const handleComplete = vi.fn();
-    render(<WizardContainer onComplete={handleComplete} />);
+    render(<WizardContainer initialMode="manual" onComplete={handleComplete} />);
 
     // Step 1: Archetype
     fireEvent.click(screen.getByText(/Стальной щит/i));
@@ -192,6 +192,8 @@ describe('WizardContainer Component', () => {
     render(<CreateCharacterPage />);
 
     expect(screen.getByText(/Сотворение персонажа/i)).toBeDefined();
+    // Switch to manual mode
+    fireEvent.click(screen.getByTestId('mode-manual-btn'));
     expect(screen.getByText(/Стальной щит/i)).toBeDefined();
 
     // Select role
@@ -215,6 +217,41 @@ describe('WizardContainer Component', () => {
     await waitFor(() => {
       expect(mockPush).toHaveBeenCalledWith(expect.stringMatching(/^\/character\/HERO-/));
     }, { timeout: 5000 });
+  });
+
+  it('supports personality quiz mode: discovers archetype, calculates alignment, and transitions to step 2', async () => {
+    render(<WizardContainer initialMode="quiz" onComplete={() => {}} />);
+
+    // Starts in quiz mode
+    expect(screen.getByText(/Ролевой тест личности/i)).toBeDefined();
+    expect(screen.getByText(/Вопрос 1 из 10/i)).toBeDefined();
+
+    // Answer questions iteratively
+    for (let i = 1; i <= 10; i++) {
+      // Find the first option button for the current question
+      const allButtons = screen.getAllByRole('button');
+      const optionBtn = allButtons.find(
+        (b) =>
+          b.className.includes('p-4 rounded-xl border text-left')
+      );
+      expect(optionBtn).toBeDefined();
+      fireEvent.click(optionBtn!);
+    }
+
+    // Finished screen with alignment & summary
+    await waitFor(() => {
+      expect(screen.getByText(/Ваш архетип определен/i)).toBeDefined();
+      expect(screen.getByText(/Мировоззрение/i)).toBeDefined();
+    });
+
+    // Accept result
+    const acceptBtn = screen.getByRole('button', { name: /Принять и перейти к кастомной механике/i });
+    fireEvent.click(acceptBtn);
+
+    // Advances to Step 2: Custom Mechanic
+    await waitFor(() => {
+      expect(screen.getByText(/Особая механика|Уникальная черта/i)).toBeDefined();
+    });
   });
 });
 

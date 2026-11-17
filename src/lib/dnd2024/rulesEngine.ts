@@ -211,6 +211,7 @@ export function buildBaseChassis(selection: ArchetypeSelection): CharacterChassi
     ac,
     speed,
     originFeat: profile.originFeat,
+    alignment: selection.alignment,
     createdAt: new Date().toISOString(),
   });
 

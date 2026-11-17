@@ -23,6 +23,7 @@ import { generatePortrait, generateMockSvgPortrait } from '@/lib/ai/portraitPipe
 export interface WizardContainerProps {
   onComplete?: (character: Character) => void;
   initialSelection?: Partial<ArchetypeSelection>;
+  initialMode?: 'quiz' | 'manual';
 }
 
 type MainStep = 1 | 2 | 3 | 4;
@@ -31,6 +32,7 @@ type ArchetypeSubStep = 'role' | 'power' | 'species' | 'name';
 export const WizardContainer: React.FC<WizardContainerProps> = ({
   onComplete,
   initialSelection,
+  initialMode = 'quiz',
 }) => {
   // Step 1 state
   const [mainStep, setMainStep] = useState<MainStep>(1);
@@ -274,6 +276,7 @@ export const WizardContainer: React.FC<WizardContainerProps> = ({
             {/* Step 1: Archetype Selector */}
             {mainStep === 1 && (
               <ArchetypeSelector
+                initialMode={initialMode}
                 selection={selection}
                 onChange={setSelection}
                 subStep={archetypeSubStep}

@@ -333,6 +333,14 @@ export function InteractiveSheet({ character }: InteractiveSheetProps) {
               <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-800 text-slate-300">
                 {backgroundName}
               </span>
+              {character.alignment && (
+                <span
+                  data-testid="character-alignment-badge"
+                  className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-950/60 border border-indigo-500/30 text-indigo-300"
+                >
+                  ⚖️ {character.alignment}
+                </span>
+              )}
             </div>
 
             <h1 className="text-2xl sm:text-4xl font-serif font-black text-slate-100 tracking-tight">
