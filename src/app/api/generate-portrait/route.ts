@@ -15,10 +15,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Request body must be an object' }, { status: 400 });
     }
 
-    const { character, photoBase64, presetId } = body as {
+    const { character, photoBase64, presetId, useFreeApi, model } = body as {
       character?: Partial<Character>;
       photoBase64?: unknown;
       presetId?: unknown;
+      useFreeApi?: unknown;
+      model?: unknown;
     };
 
     if (!character || typeof character !== 'object') {
@@ -47,6 +49,8 @@ export async function POST(request: Request) {
         character,
         photoBase64: photoBase64 as string | undefined,
         presetId: presetId as string | undefined,
+        useFreeApi: typeof useFreeApi === 'boolean' ? useFreeApi : undefined,
+        model: typeof model === 'string' ? model : undefined,
       });
 
       return NextResponse.json({ portraitUrl: result.portraitUrl }, { status: 200 });

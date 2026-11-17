@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
   buildPortraitPrompt,
   generatePortrait,
@@ -295,6 +295,63 @@ describe('Portrait Generation Pipeline', () => {
 
       const json = await response.json();
       expect(json.error).toMatch(/invalid|corrupt/i);
+    });
+  });
+
+  describe('SubNP Free Image API Integration', () => {
+    it('parses SubNP SSE stream events and returns generated image URL', async () => {
+      const { callSubnpImageApi } = await import('@/lib/ai/portraitPipeline');
+
+      const mockSseStream = 'data: {"status":"processing","message":"Starting..."}\n\ndata: {"status":"complete","imageUrl":"https://subnp.com/api/image/test-123","model":"flux"}\n\n';
+      const mockFetch = vi.fn().mockResolvedValue(
+        new Response(mockSseStream, {
+          status: 200,
+          headers: { 'Content-Type': 'text/event-stream' },
+        })
+      );
+
+      const url = await callSubnpImageApi('fantasy dwarf warrior', 'flux', mockFetch as unknown as typeof fetch);
+      expect(url).toBe('https://subnp.com/api/image/test-123');
+      expect(mockFetch).toHaveBeenCalledWith(
+        'https://subnp.com/api/free/generate',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ prompt: 'fantasy dwarf warrior', model: 'flux' }),
+        })
+      );
+    });
+
+    it('returns null and falls back when SubNP returns an error event', async () => {
+      const { callSubnpImageApi } = await import('@/lib/ai/portraitPipeline');
+
+      const mockSseStream = 'data: {"status":"error","message":"Image generation failed"}\n\n';
+      const mockFetch = vi.fn().mockResolvedValue(
+        new Response(mockSseStream, {
+          status: 200,
+          headers: { 'Content-Type': 'text/event-stream' },
+        })
+      );
+
+      const url = await callSubnpImageApi('fantasy dwarf warrior', 'flux', mockFetch as unknown as typeof fetch);
+      expect(url).toBeNull();
+    });
+
+    it('generatePortrait seamlessly uses SubNP free API when available', async () => {
+      const mockSseStream = 'data: {"status":"complete","imageUrl":"https://subnp.com/api/image/free-hero-999"}\n\n';
+      const mockFetch = vi.fn().mockResolvedValue(
+        new Response(mockSseStream, {
+          status: 200,
+          headers: { 'Content-Type': 'text/event-stream' },
+        })
+      );
+
+      const result = await generatePortrait({
+        character: baseDwarfFighter,
+        useFreeApi: true,
+        fetchFn: mockFetch as unknown as typeof fetch,
+      });
+
+      expect(result.portraitUrl).toBe('https://subnp.com/api/image/free-hero-999');
     });
   });
 });

@@ -6,6 +6,7 @@ export interface GeneratePortraitOptions {
   presetId?: string;
   apiKey?: string;
   model?: string;
+  useFreeApi?: boolean;
   fetchFn?: typeof fetch;
 }
 
@@ -567,13 +568,112 @@ export async function generatePortrait(
         return { portraitUrl: externalUrl, prompt };
       }
     } catch {
-      // Graceful fallback to mock mode
+      // Graceful fallback to next tier
+    }
+  }
+
+  // Attempt SubNP Free Image Generation API (https://subnp.com/ru/free-api)
+  // In unit test runner (Vitest), only run if explicitly enabled via useFreeApi: true
+  const isTestEnv = typeof process !== 'undefined' && (process.env.VITEST || process.env.NODE_ENV === 'test');
+  const shouldTryFreeApi = options.useFreeApi === true || (options.useFreeApi !== false && !isTestEnv);
+
+  if (shouldTryFreeApi) {
+    try {
+      const freeModel = options.model || 'flux';
+      const freeImageUrl = await callSubnpImageApi(prompt, freeModel, fetchFn);
+      if (freeImageUrl) {
+        return { portraitUrl: freeImageUrl, prompt };
+      }
+    } catch {
+      // Graceful fallback to mock SVG
     }
   }
 
   // Mock / offline mode: dynamic SVG portrait
   const portraitUrl = generateMockSvgPortrait(character, photoBase64);
   return { portraitUrl, prompt };
+}
+
+/**
+ * Free AI Image Generation via SubNP Free API (https://subnp.com/ru/free-api)
+ * Models: 'flux' (recommended & working), 'turbo', 'magic'
+ */
+export async function callSubnpImageApi(
+  prompt: string,
+  model: string = 'flux',
+  fetchFn?: typeof fetch
+): Promise<string | null> {
+  const fetchImpl = fetchFn || globalThis.fetch;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 25000);
+
+  try {
+    const response = await fetchImpl('https://subnp.com/api/free/generate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) DND-Character-Creator/1.0',
+      },
+      body: JSON.stringify({ prompt, model }),
+      signal: controller.signal,
+    });
+
+    if (!response.ok || !response.body) {
+      return null;
+    }
+
+    const bodyObj = response.body as { getReader?: () => ReadableStreamDefaultReader<Uint8Array> };
+    if (typeof bodyObj.getReader === 'function') {
+      const reader = bodyObj.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (trimmed.startsWith('data: ')) {
+            try {
+              const event = JSON.parse(trimmed.slice(6)) as { status?: string; imageUrl?: string };
+              if (event.status === 'complete' && event.imageUrl) {
+                return event.imageUrl;
+              }
+              if (event.status === 'error') {
+                return null;
+              }
+            } catch {
+              // Ignore single malformed chunk
+            }
+          }
+        }
+      }
+    } else if (typeof response.text === 'function') {
+      const text = await response.text();
+      for (const line of text.split('\n')) {
+        const trimmed = line.trim();
+        if (trimmed.startsWith('data: ')) {
+          try {
+            const event = JSON.parse(trimmed.slice(6)) as { status?: string; imageUrl?: string };
+            if (event.status === 'complete' && event.imageUrl) {
+              return event.imageUrl;
+            }
+          } catch {}
+        }
+      }
+    }
+
+    return null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 /**
