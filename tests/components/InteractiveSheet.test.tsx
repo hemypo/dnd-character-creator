@@ -84,6 +84,12 @@ describe('InteractiveSheet Component', () => {
     const minusBtn = screen.getByTestId('hp-decrease-btn');
     const plusBtn = screen.getByTestId('hp-increase-btn');
 
+    // WCAG 2.5.5 touch target size compliance
+    expect(minusBtn.className).toContain('min-w-[48px]');
+    expect(minusBtn.className).toContain('min-h-[48px]');
+    expect(plusBtn.className).toContain('min-w-[48px]');
+    expect(plusBtn.className).toContain('min-h-[48px]');
+
     // Click minus -> 11
     fireEvent.click(minusBtn);
     expect(hpDisplay.textContent).toContain('11');
@@ -184,6 +190,20 @@ describe('InteractiveSheet Component', () => {
     await waitFor(() => {
       expect(screen.queryByRole('dialog')).toBeNull();
     });
+  });
+
+  it('handles edge case character with zero maxHp and missing ability scores safely without NaN', () => {
+    const edgeChar = {
+      ...mockCharacter,
+      hp: 0,
+      maxHp: 0,
+      abilityScores: {} as unknown as Character['abilityScores'],
+    };
+    render(<InteractiveSheet character={edgeChar} />);
+    const hpDisplay = screen.getByTestId('current-hp-display');
+    expect(hpDisplay.textContent).toContain('0');
+    expect(hpDisplay.textContent).toContain('/ 1');
+    expect(screen.getByText(/Инициатива|Initiative/i)).toBeDefined();
   });
 });
 

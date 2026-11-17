@@ -74,13 +74,15 @@ const BACKGROUND_RU: Record<string, string> = {
 };
 
 export function InteractiveSheet({ character }: InteractiveSheetProps) {
-  const [currentHp, setCurrentHp] = useState<number>(character.hp);
+  const maxHp = Math.max(1, character.maxHp || character.hp || 1);
+  const [currentHp, setCurrentHp] = useState<number>(() =>
+    Math.min(maxHp, Math.max(0, character.hp ?? maxHp))
+  );
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
 
-  const maxHp = character.maxHp || character.hp;
-  const dexMod = calculateModifier(character.abilityScores.dexterity);
+  const dexMod = calculateModifier(character.abilityScores?.dexterity ?? 10);
   const formatBonus = (val: number) => (val >= 0 ? `+${val}` : `${val}`);
 
   const handleDecreaseHp = () => {
@@ -313,22 +315,22 @@ export function InteractiveSheet({ character }: InteractiveSheetProps) {
           </div>
 
           {/* Interactive - / + buttons */}
-          <div className="flex items-center justify-center gap-2">
+          <div className="flex items-center justify-center gap-3">
             <button
               onClick={handleDecreaseHp}
               data-testid="hp-decrease-btn"
-              className="w-8 h-8 rounded-lg bg-slate-800 hover:bg-rose-900/40 text-slate-200 border border-slate-700 hover:border-rose-700 flex items-center justify-center transition-colors active:scale-90"
+              className="w-12 h-12 min-w-[48px] min-h-[48px] text-xl font-bold flex items-center justify-center rounded-xl bg-slate-800 hover:bg-rose-900/40 text-slate-200 border border-slate-700 hover:border-rose-700 transition-colors active:scale-95 shadow-sm"
               aria-label="Уменьшить текущие хиты"
             >
-              <Minus className="w-4 h-4" />
+              <Minus className="w-5 h-5" />
             </button>
             <button
               onClick={handleIncreaseHp}
               data-testid="hp-increase-btn"
-              className="w-8 h-8 rounded-lg bg-slate-800 hover:bg-emerald-900/40 text-slate-200 border border-slate-700 hover:border-emerald-700 flex items-center justify-center transition-colors active:scale-90"
+              className="w-12 h-12 min-w-[48px] min-h-[48px] text-xl font-bold flex items-center justify-center rounded-xl bg-slate-800 hover:bg-emerald-900/40 text-slate-200 border border-slate-700 hover:border-emerald-700 transition-colors active:scale-95 shadow-sm"
               aria-label="Увеличить текущие хиты"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-5 h-5" />
             </button>
           </div>
 
@@ -349,7 +351,7 @@ export function InteractiveSheet({ character }: InteractiveSheetProps) {
         </h3>
         <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 sm:gap-3">
           {abilities.map((ability) => {
-            const score = character.abilityScores[ability.key] ?? 10;
+            const score = character.abilityScores?.[ability.key] ?? 10;
             const mod = calculateModifier(score);
             return (
               <div

@@ -54,7 +54,9 @@ export async function POST(request: Request) {
   }
 }
 
-export async function GET(request?: Request) {
+export async function GET(): Promise<NextResponse>;
+export async function GET(request: Request): Promise<NextResponse>;
+export async function GET(_request?: Request): Promise<NextResponse> {
   try {
     const characters = await listRecentCharacters();
     return NextResponse.json({ success: true, characters }, { status: 200 });
